@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.2.4] - 2026-03-26
+
+### Fixed
+- **Mobile PDF Viewing:** Removed Google Docs Viewer dependency (was showing "No preview available")
+- PDFs now open directly in new tab on mobile devices for native viewing
+- Desktop continues to use iframe with fallback to new tab
+- Simplified and more reliable PDF viewing across all devices
+
+### Changed
+- Mobile devices now open PDFs in new tab using device's native PDF viewer
+- Removed external dependency on Google Docs Viewer
+- Reduced timeout back to 3 seconds for better responsiveness
+- Cleaner, more maintainable code
+
 ## [1.2.3] - 2026-03-26
 
 ### Fixed
