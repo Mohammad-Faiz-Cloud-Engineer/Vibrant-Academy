@@ -102,7 +102,7 @@ NOTES.txt
 scratch.*
 test123.*
 
-# Archive Files (optional - uncomment if you don't want to track zip files)
-# *.zip
-# *.tar.gz
-# *.rar
+# Archive Files
+# Note: ZIP files in "Vibrant Academy Modules" are intentionally tracked
+*.zip
+!Vibrant\ Academy\ Modules/**/*.zip
