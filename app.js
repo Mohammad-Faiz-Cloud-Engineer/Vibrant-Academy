@@ -6,6 +6,7 @@ class StudyMaterialsApp {
         this.searchTerm = '';
         this.searchTimeout = null;
         this.deferredPrompt = null;
+        this.currentPdfUrl = '';
         
         this.elements = {
             content: document.getElementById('content'),
@@ -16,7 +17,8 @@ class StudyMaterialsApp {
             pdfViewer: document.getElementById('pdfViewer'),
             pdfTitle: document.getElementById('pdfTitle'),
             closeModal: document.getElementById('closeModal'),
-            modalOverlay: document.querySelector('.modal-overlay')
+            modalOverlay: document.querySelector('.modal-overlay'),
+            downloadPdf: document.getElementById('downloadPdf')
         };
         
         this.init();
@@ -42,6 +44,7 @@ class StudyMaterialsApp {
         
         this.elements.closeModal.addEventListener('click', () => this.closeModal());
         this.elements.modalOverlay.addEventListener('click', () => this.closeModal());
+        this.elements.downloadPdf.addEventListener('click', () => this.downloadCurrentPdf());
         
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && this.elements.modal.classList.contains('active')) {
@@ -152,16 +155,65 @@ class StudyMaterialsApp {
     }
     
     openModal(url, title) {
-        this.elements.pdfViewer.src = url;
+        // Store current PDF URL for download
+        this.currentPdfUrl = decodeURIComponent(url);
+        
+        // Try to open in iframe first
+        this.elements.pdfViewer.src = this.currentPdfUrl;
         this.elements.pdfTitle.textContent = title;
         this.elements.modal.classList.add('active');
         document.body.style.overflow = 'hidden';
+        
+        // Add error handler for iframe load failure
+        const iframe = this.elements.pdfViewer;
+        const errorHandler = () => {
+            // If iframe fails to load, open PDF in new tab instead
+            console.log('PDF failed to load in iframe, opening in new tab');
+            window.open(this.currentPdfUrl, '_blank');
+            this.closeModal();
+        };
+        
+        // Set a timeout to check if PDF loaded
+        const loadTimeout = setTimeout(() => {
+            try {
+                // Check if iframe loaded successfully
+                if (!iframe.contentDocument && !iframe.contentWindow) {
+                    errorHandler();
+                }
+            } catch (e) {
+                // Cross-origin error means PDF might be loading
+                console.log('PDF loading in iframe');
+            }
+        }, 3000);
+        
+        // Clear timeout if load succeeds
+        iframe.onload = () => {
+            clearTimeout(loadTimeout);
+        };
+        
+        iframe.onerror = () => {
+            clearTimeout(loadTimeout);
+            errorHandler();
+        };
+    }
+    
+    downloadCurrentPdf() {
+        if (!this.currentPdfUrl) return;
+        
+        const link = document.createElement('a');
+        link.href = this.currentPdfUrl;
+        link.download = this.elements.pdfTitle.textContent + '.pdf';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
     
     closeModal() {
         this.elements.modal.classList.remove('active');
         this.elements.pdfViewer.src = '';
         this.elements.pdfTitle.textContent = '';
+        this.currentPdfUrl = '';
         document.body.style.overflow = '';
     }
     
@@ -236,15 +288,18 @@ class StudyMaterialsApp {
 
     
     generateCategoryHTML(category, pdfs) {
-        const pdfsHTML = pdfs.map(pdf => `
-            <a href="#" class="item" data-pdf="${this.escapeHtml(encodeURI(pdf.file))}">
+        const pdfsHTML = pdfs.map(pdf => {
+            const encodedPath = pdf.file.split('/').map(part => encodeURIComponent(part)).join('/');
+            return `
+            <a href="#" class="item" data-pdf="${this.escapeHtml(encodedPath)}">
                 <div class="pdf-badge">PDF</div>
                 <span class="item-name">${this.escapeHtml(pdf.name)}</span>
                 <svg class="arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                 </svg>
             </a>
-        `).join('');
+        `;
+        }).join('');
         
         return `
             <div class="cat">
