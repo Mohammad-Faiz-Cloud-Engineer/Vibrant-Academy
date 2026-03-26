@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.2.5] - 2026-03-26
+
+### Added
+- **Native App Feel:** Disabled pull-to-refresh gesture for more native application experience
+- Added `overscroll-behavior: none` to prevent browser refresh on downward scroll
+- Improves PWA usability on mobile devices
+
+### Changed
+- Enhanced mobile UX by preventing default browser pull-to-refresh behavior
+
 ## [1.2.4] - 2026-03-26
 
 ### Fixed
