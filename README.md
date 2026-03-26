@@ -76,4 +76,4 @@ Found a bug? Have a suggestion? Open an issue or send a pull request.
 
 ---
 
-Made with ☕ by Mohammad Faiz
+Made by Mohammad Faiz
