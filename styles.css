@@ -44,6 +44,19 @@ body {
 }
 
 .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.brand-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.brand-name {
     font-family: 'Space Grotesk', sans-serif;
     font-size: 24px;
     font-weight: 700;
@@ -264,7 +277,12 @@ body {
         padding: 16px 20px;
     }
     
-    .brand {
+    .brand-logo {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .brand-name {
         font-size: 20px;
     }
     
@@ -309,6 +327,15 @@ body {
 }
 
 @media (max-width: 480px) {
+    .brand-logo {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .brand-name {
+        font-size: 18px;
+    }
+    
     .class-tabs {
         gap: 6px;
         padding: 3px;
