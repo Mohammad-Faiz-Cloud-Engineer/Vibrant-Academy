@@ -3,16 +3,25 @@
 ## [1.2.1] - 2026-03-26
 
 ### Changed
+- **BREAKING:** Switched service worker from cache-first to network-first strategy
+  - Always fetches latest content from server when online
+  - Only serves cached content when offline
+  - Ensures users always see the most up-to-date materials and code
+  - Cache version bumped to v1.2.1
 - Removed debug console.log statements from production code
 - Removed emoji from README for professional presentation
 - Cleaned up service worker error handling
-- Fixed manifest.json icon sizes to match actual file dimensions (500x500)
+- Fixed manifest.json icon sizes to match actual file dimensions (3200x3200)
 - Removed IDE-specific .vscode directory from repository
 - Improved code comments for clarity
+- Added Vibrant Academy logo to navigation bar
+- Fixed logo display with proper object-fit styling
 
 ### Fixed
 - Service worker registration error handling now silent
 - PDF modal error handling streamlined without debug output
+- Logo now displays correctly without cropping (object-fit: contain)
+- Caching strategy now prioritizes fresh content over stale cache
 
 ## [1.2.0] - 2026-03-26
 
