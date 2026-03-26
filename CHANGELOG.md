@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.2.6] - 2026-03-26
+
+### Fixed
+- **CRITICAL BUG:** Class 12th Physics modules now showing all 15 files (was showing only 5)
+  - Added missing modules: Capacitance, Diffraction & Polarisation, Errors in Measurements & Instruments, Geometrical Optics, Gravitation, Magnetic Properties of Matter & Electromagnetic Waves, Optical Instruments, Surface Tension & Viscosity, Wave Optics
+  - Fixed file path casing (Mega_XII vs mega_XII)
+  - Reorganized into 4 categories: Electromagnetism (6), Optics (4), Modern Physics (2), Mechanics & Others (3)
+
+- **CRITICAL BUG:** Class 12th Mathematics modules now showing all 14 files (was showing only 7)
+  - Added missing modules: Functions, Inverse Trigonometric Functions, Complex Numbers, Statistics, Conic Section
+  - Combined related topics: "Indefinite & Definite Integration", "Differential Equation & Area Under the Curve", "Vectors & 3-D"
+  - Fixed file path casing to match actual files
+  - Reorganized into 3 categories: Calculus (7), Algebra & Vectors (6), Coordinate Geometry (1)
+
+### Changed
+- Updated data.js to match actual file structure in directories
+- All 29 Class 12th modules now properly accessible (15 Physics + 14 Mathematics)
+
 ## [1.2.5] - 2026-03-26
 
 ### Added
