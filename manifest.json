@@ -2,7 +2,7 @@
   "name": "Vibrant Academy Study Materials",
   "short_name": "Vibrant Academy",
   "description": "Access Class 11th and 12th study materials for Physics, Chemistry, and Mathematics",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#0a0a0a",
   "theme_color": "#ff3366",
@@ -34,7 +34,7 @@
       "name": "Class 11th Materials",
       "short_name": "Class 11",
       "description": "Access Class 11th study materials",
-      "url": "/?class=11",
+      "url": "./?class=11",
       "icons": [
         {
           "src": "icon/logo.png",
@@ -46,7 +46,7 @@
       "name": "Class 12th Materials",
       "short_name": "Class 12",
       "description": "Access Class 12th study materials",
-      "url": "/?class=12",
+      "url": "./?class=12",
       "icons": [
         {
           "src": "icon/logo.png",
