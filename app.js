@@ -157,7 +157,15 @@ class StudyMaterialsApp {
     openModal(url, title) {
         this.currentPdfUrl = decodeURIComponent(url);
         
-        this.elements.pdfViewer.src = this.currentPdfUrl;
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        if (isMobile) {
+            const googleDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(window.location.origin + '/' + this.currentPdfUrl)}&embedded=true`;
+            this.elements.pdfViewer.src = googleDocsUrl;
+        } else {
+            this.elements.pdfViewer.src = this.currentPdfUrl;
+        }
+        
         this.elements.pdfTitle.textContent = title;
         this.elements.modal.classList.add('active');
         document.body.style.overflow = 'hidden';
@@ -176,7 +184,7 @@ class StudyMaterialsApp {
             } catch (e) {
                 // Cross-origin restriction - PDF is loading normally
             }
-        }, 3000);
+        }, 5000);
         
         iframe.onload = () => {
             clearTimeout(loadTimeout);
