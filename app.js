@@ -156,44 +156,43 @@ class StudyMaterialsApp {
     
     openModal(url, title) {
         this.currentPdfUrl = decodeURIComponent(url);
-        
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        
-        if (isMobile) {
-            const googleDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(window.location.origin + '/' + this.currentPdfUrl)}&embedded=true`;
-            this.elements.pdfViewer.src = googleDocsUrl;
-        } else {
-            this.elements.pdfViewer.src = this.currentPdfUrl;
-        }
-        
         this.elements.pdfTitle.textContent = title;
         this.elements.modal.classList.add('active');
         document.body.style.overflow = 'hidden';
         
-        const iframe = this.elements.pdfViewer;
-        const errorHandler = () => {
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        if (isMobile) {
             window.open(this.currentPdfUrl, '_blank');
             this.closeModal();
-        };
-        
-        const loadTimeout = setTimeout(() => {
-            try {
-                if (!iframe.contentDocument && !iframe.contentWindow) {
-                    errorHandler();
+        } else {
+            this.elements.pdfViewer.src = this.currentPdfUrl;
+            
+            const iframe = this.elements.pdfViewer;
+            const errorHandler = () => {
+                window.open(this.currentPdfUrl, '_blank');
+                this.closeModal();
+            };
+            
+            const loadTimeout = setTimeout(() => {
+                try {
+                    if (!iframe.contentDocument && !iframe.contentWindow) {
+                        errorHandler();
+                    }
+                } catch (e) {
+                    // Cross-origin restriction - PDF is loading normally
                 }
-            } catch (e) {
-                // Cross-origin restriction - PDF is loading normally
-            }
-        }, 5000);
-        
-        iframe.onload = () => {
-            clearTimeout(loadTimeout);
-        };
-        
-        iframe.onerror = () => {
-            clearTimeout(loadTimeout);
-            errorHandler();
-        };
+            }, 3000);
+            
+            iframe.onload = () => {
+                clearTimeout(loadTimeout);
+            };
+            
+            iframe.onerror = () => {
+                clearTimeout(loadTimeout);
+                errorHandler();
+            };
+        }
     }
     
     downloadCurrentPdf() {
