@@ -367,6 +367,35 @@ body {
     padding-right: 16px;
 }
 
+.modal-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.modal-download {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text);
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+}
+
+.modal-download:hover {
+    background: rgba(0, 212, 255, 0.2);
+    border-color: var(--physics);
+    color: var(--physics);
+}
+
 .modal-close {
     width: 32px;
     height: 32px;
@@ -404,6 +433,11 @@ body {
         font-size: 13px;
     }
     
+    .modal-actions {
+        gap: 6px;
+    }
+    
+    .modal-download,
     .modal-close {
         width: 28px;
         height: 28px;
