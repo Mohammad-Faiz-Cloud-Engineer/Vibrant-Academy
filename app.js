@@ -107,7 +107,8 @@ class StudyMaterialsApp {
         
         document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        this.currentClass = parseInt(btn.dataset.class, 10);
+        const classValue = btn.dataset.class;
+        this.currentClass = classValue === 'others' ? 'others' : parseInt(classValue, 10);
         this.updateDownloadButton();
         this.render();
     }
@@ -130,8 +131,13 @@ class StudyMaterialsApp {
     }
     
     updateDownloadButton() {
-        const className = this.currentClass === 11 ? '11th' : '12th';
-        this.elements.downloadText.textContent = `Download Class ${className} (All Materials)`;
+        if (this.currentClass === 'others') {
+            this.elements.downloadBtn.style.display = 'none';
+        } else {
+            this.elements.downloadBtn.style.display = 'flex';
+            const className = this.currentClass === 11 ? '11th' : '12th';
+            this.elements.downloadText.textContent = `Download Class ${className} (All Materials)`;
+        }
     }
 
     
