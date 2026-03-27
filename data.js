@@ -166,3 +166,14 @@ STUDY_MATERIALS[12].Mathematics = {
         ]
     }
 };
+
+STUDY_MATERIALS['others'] = {
+    'Resources': {
+        categories: {
+            'College Information': [
+                { name: 'College List', file: 'Vibrant Academy Modules/Others/College List.pdf' },
+                { name: 'College List (CUET)', file: 'Vibrant Academy Modules/Others/College List(CUET).pdf' }
+            ]
+        }
+    }
+};
