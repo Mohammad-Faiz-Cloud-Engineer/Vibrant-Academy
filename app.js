@@ -166,7 +166,7 @@ class StudyMaterialsApp {
         try {
             decodedUrl = decodeURIComponent(url);
         } catch (e) {
-            console.error('Error decoding URL:', e);
+            // Fallback to original URL if decoding fails
             decodedUrl = url;
         }
         
@@ -185,7 +185,7 @@ class StudyMaterialsApp {
             
             const iframe = this.elements.pdfViewer;
             const errorHandler = () => {
-                console.error('PDF failed to load:', this.currentPdfUrl);
+                // Fallback: open PDF in new tab if iframe fails
                 window.open(this.currentPdfUrl, '_blank');
                 this.closeModal();
             };
