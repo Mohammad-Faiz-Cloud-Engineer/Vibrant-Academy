@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_NAME = 'vibrant-academy-v1.2.5';
+const CACHE_NAME = 'vibrant-academy-v1.4.0';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -16,7 +16,10 @@ self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => {
-                return cache.addAll(ASSETS_TO_CACHE);
+                return cache.addAll(ASSETS_TO_CACHE).catch((err) => {
+                    // Some assets failed to cache, but continue anyway
+                    return Promise.resolve();
+                });
             })
             .then(() => self.skipWaiting())
     );
@@ -24,9 +27,9 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
     event.waitUntil(
-        caches.keys().then(async (cacheNames) => {
+        caches.keys().then((cacheNames) => {
             return Promise.all(
-                cacheNames.map(async (cacheName) => {
+                cacheNames.map((cacheName) => {
                     if (cacheName !== CACHE_NAME) {
                         return caches.delete(cacheName);
                     }
@@ -41,24 +44,25 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
+    // Skip chrome-extension and other non-http(s) requests
+    if (!event.request.url.startsWith('http')) {
+        return;
+    }
+
     event.respondWith(
-        fetch(event.request, {
-            cache: 'no-cache',
-            headers: {
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
-                'Pragma': 'no-cache',
-                'Expires': '0'
-            }
-        })
+        fetch(event.request)
             .then((response) => {
-                if (!response || response.status !== 200) {
+                if (!response || response.status !== 200 || response.type === 'error') {
                     return response;
                 }
 
+                // Only cache same-origin requests
                 if (response.type === 'basic' || response.type === 'cors') {
                     const responseToCache = response.clone();
                     caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(event.request, responseToCache);
+                        cache.put(event.request, responseToCache).catch(() => {
+                            // Failed to cache, but continue
+                        });
                     });
                 }
 
