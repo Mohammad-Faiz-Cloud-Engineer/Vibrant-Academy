@@ -614,6 +614,54 @@ body {
     }
 }
 
+/* Landscape orientation optimizations */
+@media (max-height: 600px) and (orientation: landscape) {
+    .nav-wrap {
+        padding: 12px 24px;
+    }
+    
+    .hero {
+        padding: 24px 32px 20px;
+    }
+    
+    .main {
+        padding: 0 32px 40px;
+    }
+    
+    .subject {
+        padding: 20px;
+    }
+    
+    .subject-head {
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+    }
+    
+    .cat {
+        margin-bottom: 14px;
+    }
+    
+    .grid {
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 20px;
+    }
+}
+
+/* Tablet landscape */
+@media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+    .grid {
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    }
+    
+    .nav-wrap {
+        padding: 14px 32px;
+    }
+    
+    .hero {
+        padding: 32px 32px 24px;
+    }
+}
+
 .modal {
     position: fixed;
     inset: 0;
@@ -765,8 +813,25 @@ body {
     
     .modal-download,
     .modal-close {
-        width: 28px;
-        height: 28px;
+        width: 32px;
+        height: 32px;
+    }
+}
+
+/* Landscape modal optimizations */
+@media (max-height: 600px) and (orientation: landscape) {
+    .modal-header {
+        padding: 10px 16px;
+    }
+    
+    .pdf-title {
+        font-size: 13px;
+    }
+    
+    .modal-download,
+    .modal-close {
+        width: 32px;
+        height: 32px;
     }
 }
 
