@@ -1,14 +1,45 @@
 'use strict';
 
+/**
+ * Study Materials Application
+ * Manages educational content display and interaction
+ */
 class StudyMaterialsApp {
     constructor() {
-        this.currentClass = CONFIG.DEFAULT_CLASS;
+        // Configuration
+        this.currentClass = CONFIG?.DEFAULT_CLASS || 11;
         this.searchTerm = '';
         this.searchTimeout = null;
         this.deferredPrompt = null;
         this.currentPdfUrl = '';
+        this.installBanner = null;
+        this.isOnline = navigator.onLine;
         
-        this.elements = {
+        // Constants
+        this.CONSTANTS = {
+            MODAL_LOAD_TIMEOUT: 3000,
+            INSTALL_BANNER_DELAY: 100,
+            SEARCH_DEBOUNCE: CONFIG?.SEARCH_DEBOUNCE_MS || 300
+        };
+        
+        // Cache DOM elements
+        this.elements = this.cacheElements();
+        
+        // Validate required elements
+        if (!this.validateElements()) {
+            this.showError('Failed to initialize: Required elements not found');
+            return;
+        }
+        
+        this.init();
+    }
+    
+    /**
+     * Cache all DOM elements
+     * @returns {Object} Cached elements
+     */
+    cacheElements() {
+        return {
             content: document.getElementById('content'),
             searchInput: document.getElementById('searchInput'),
             downloadBtn: document.getElementById('downloadBtn'),
@@ -20,39 +51,115 @@ class StudyMaterialsApp {
             modalOverlay: document.querySelector('.modal-overlay'),
             downloadPdf: document.getElementById('downloadPdf')
         };
+    }
+    
+    /**
+     * Validate that required elements exist
+     * @returns {boolean} True if all required elements exist
+     */
+    validateElements() {
+        const required = ['content', 'searchInput', 'downloadBtn', 'modal', 'pdfViewer', 'closeModal'];
+        const missing = required.filter(key => !this.elements[key]);
         
-        this.init();
+        if (missing.length > 0) {
+            console.error('Missing required elements:', missing);
+            return false;
+        }
+        
+        return true;
     }
     
+    /**
+     * Initialize the application
+     */
     init() {
-        this.attachEventListeners();
-        this.setupPWA();
-        this.updateDownloadButton();
-        this.render();
+        try {
+            this.attachEventListeners();
+            this.setupPWA();
+            this.setupOnlineDetection();
+            this.updateDownloadButton();
+            this.render();
+        } catch (error) {
+            console.error('Initialization error:', error);
+            this.showError('Failed to initialize application');
+        }
     }
     
+    /**
+     * Attach all event listeners with null checks
+     */
     attachEventListeners() {
-        document.querySelectorAll('.tab').forEach(btn => {
+        // Class tabs
+        const tabs = document.querySelectorAll('.tab');
+        tabs.forEach(btn => {
             btn.addEventListener('click', (e) => this.handleClassChange(e));
         });
         
-        this.elements.searchInput.addEventListener('input', (e) => this.handleSearch(e));
+        // Search input
+        if (this.elements.searchInput) {
+            this.elements.searchInput.addEventListener('input', (e) => this.handleSearch(e));
+        }
         
-        this.elements.downloadBtn.addEventListener('click', () => this.handleDownload());
+        // Download button
+        if (this.elements.downloadBtn) {
+            this.elements.downloadBtn.addEventListener('click', () => this.handleDownload());
+        }
         
+        // PDF click delegation
         document.addEventListener('click', (e) => this.handlePdfClick(e));
         
-        this.elements.closeModal.addEventListener('click', () => this.closeModal());
-        this.elements.modalOverlay.addEventListener('click', () => this.closeModal());
-        this.elements.downloadPdf.addEventListener('click', () => this.downloadCurrentPdf());
+        // Modal controls
+        if (this.elements.closeModal) {
+            this.elements.closeModal.addEventListener('click', () => this.closeModal());
+        }
         
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.elements.modal.classList.contains('active')) {
-                this.closeModal();
-            }
+        if (this.elements.modalOverlay) {
+            this.elements.modalOverlay.addEventListener('click', () => this.closeModal());
+        }
+        
+        if (this.elements.downloadPdf) {
+            this.elements.downloadPdf.addEventListener('click', () => this.downloadCurrentPdf());
+        }
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => this.handleKeyboard(e));
+    }
+    
+    /**
+     * Handle keyboard events
+     * @param {KeyboardEvent} e - Keyboard event
+     */
+    handleKeyboard(e) {
+        // Escape key closes modal
+        if (e.key === 'Escape' && this.elements.modal?.classList.contains('active')) {
+            this.closeModal();
+        }
+        
+        // Ctrl/Cmd + K focuses search
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            this.elements.searchInput?.focus();
+        }
+    }
+    
+    /**
+     * Setup online/offline detection
+     */
+    setupOnlineDetection() {
+        window.addEventListener('online', () => {
+            this.isOnline = true;
+            this.showNotification('Back online', 'success');
+        });
+        
+        window.addEventListener('offline', () => {
+            this.isOnline = false;
+            this.showNotification('You are offline', 'warning');
         });
     }
     
+    /**
+     * Setup PWA features
+     */
     setupPWA() {
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
@@ -62,75 +169,187 @@ class StudyMaterialsApp {
 
         window.addEventListener('appinstalled', () => {
             this.deferredPrompt = null;
+            this.hideInstallPrompt();
+            this.showNotification('App installed successfully', 'success');
         });
     }
     
+    /**
+     * Show PWA install prompt
+     */
     showInstallPrompt() {
-        const installBanner = document.createElement('div');
-        installBanner.className = 'install-banner';
-        installBanner.innerHTML = `
-            <div class="install-content">
-                <div class="install-text">
-                    <strong>Install Vibrant Academy</strong>
-                    <span>Access materials offline anytime</span>
-                </div>
-                <div class="install-actions">
-                    <button class="install-btn" id="installBtn">Install</button>
-                    <button class="dismiss-btn" id="dismissBtn">×</button>
-                </div>
-            </div>
-        `;
+        // Check if already dismissed
+        if (localStorage.getItem('install-dismissed') === 'true') {
+            return;
+        }
         
-        document.body.appendChild(installBanner);
+        // Don't show if already showing
+        if (this.installBanner) {
+            return;
+        }
         
-        document.getElementById('installBtn').addEventListener('click', async () => {
-            if (this.deferredPrompt) {
-                this.deferredPrompt.prompt();
-                await this.deferredPrompt.userChoice;
-                this.deferredPrompt = null;
-                installBanner.remove();
-            }
-        });
+        this.installBanner = document.createElement('div');
+        this.installBanner.className = 'install-banner';
         
-        document.getElementById('dismissBtn').addEventListener('click', () => {
-            installBanner.remove();
-        });
+        // Create elements safely
+        const content = document.createElement('div');
+        content.className = 'install-content';
         
+        const textDiv = document.createElement('div');
+        textDiv.className = 'install-text';
+        
+        const strong = document.createElement('strong');
+        strong.textContent = 'Install Vibrant Academy';
+        
+        const span = document.createElement('span');
+        span.textContent = 'Access materials offline anytime';
+        
+        textDiv.appendChild(strong);
+        textDiv.appendChild(span);
+        
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'install-actions';
+        
+        const installBtn = document.createElement('button');
+        installBtn.className = 'install-btn';
+        installBtn.textContent = 'Install';
+        installBtn.setAttribute('aria-label', 'Install application');
+        
+        const dismissBtn = document.createElement('button');
+        dismissBtn.className = 'dismiss-btn';
+        dismissBtn.textContent = '×';
+        dismissBtn.setAttribute('aria-label', 'Dismiss install prompt');
+        
+        // Add event listeners
+        installBtn.addEventListener('click', () => this.handleInstall());
+        dismissBtn.addEventListener('click', () => this.handleDismissInstall());
+        
+        actionsDiv.appendChild(installBtn);
+        actionsDiv.appendChild(dismissBtn);
+        
+        content.appendChild(textDiv);
+        content.appendChild(actionsDiv);
+        
+        this.installBanner.appendChild(content);
+        document.body.appendChild(this.installBanner);
+        
+        // Show with animation
         setTimeout(() => {
-            installBanner.classList.add('show');
-        }, 100);
+            this.installBanner?.classList.add('show');
+        }, this.CONSTANTS.INSTALL_BANNER_DELAY);
     }
     
+    /**
+     * Handle install button click
+     */
+    async handleInstall() {
+        if (!this.deferredPrompt) {
+            return;
+        }
+        
+        try {
+            await this.deferredPrompt.prompt();
+            const { outcome } = await this.deferredPrompt.userChoice;
+            
+            if (outcome === 'accepted') {
+                console.log('User accepted the install prompt');
+            } else {
+                console.log('User dismissed the install prompt');
+            }
+            
+            this.deferredPrompt = null;
+            this.hideInstallPrompt();
+        } catch (error) {
+            console.error('Install prompt error:', error);
+            this.showNotification('Installation failed', 'error');
+        }
+    }
+    
+    /**
+     * Handle dismiss install button
+     */
+    handleDismissInstall() {
+        localStorage.setItem('install-dismissed', 'true');
+        this.hideInstallPrompt();
+    }
+    
+    /**
+     * Hide install prompt
+     */
+    hideInstallPrompt() {
+        if (this.installBanner) {
+            this.installBanner.remove();
+            this.installBanner = null;
+        }
+    }
+    
+    /**
+     * Handle class tab change
+     * @param {Event} e - Click event
+     */
     handleClassChange(e) {
         const btn = e.target.closest('.tab');
         if (!btn) return;
         
+        // Update active state
         document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+        
+        // Update current class
         const classValue = btn.dataset.class;
         this.currentClass = classValue === 'others' ? 'others' : parseInt(classValue, 10);
+        
+        // Update UI
         this.updateDownloadButton();
         this.render();
     }
     
+    /**
+     * Handle download button click
+     */
     handleDownload() {
-        const zipPath = CONFIG.DOWNLOAD_PATHS[this.currentClass];
-        
-        if (!zipPath) {
-            alert('Download not available for this class');
+        if (!CONFIG?.DOWNLOAD_PATHS) {
+            this.showNotification('Download configuration not found', 'error');
             return;
         }
         
-        const link = document.createElement('a');
-        link.href = zipPath;
-        link.download = `Class_${this.currentClass}_Modules.zip`;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const zipPath = CONFIG.DOWNLOAD_PATHS[this.currentClass];
+        
+        if (!zipPath) {
+            this.showNotification('Download not available for this class', 'warning');
+            return;
+        }
+        
+        if (!this.isOnline) {
+            this.showNotification('You are offline. Please connect to download.', 'warning');
+            return;
+        }
+        
+        try {
+            const link = document.createElement('a');
+            link.href = zipPath;
+            link.download = `Class_${this.currentClass}_Modules.zip`;
+            link.rel = 'noopener noreferrer';
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            this.showNotification('Download started', 'success');
+        } catch (error) {
+            console.error('Download error:', error);
+            this.showNotification('Download failed', 'error');
+        }
     }
     
+    /**
+     * Update download button visibility and text
+     */
     updateDownloadButton() {
+        if (!this.elements.downloadBtn || !this.elements.downloadText) {
+            return;
+        }
+        
         if (this.currentClass === 'others') {
             this.elements.downloadBtn.style.display = 'none';
         } else {
@@ -139,100 +358,197 @@ class StudyMaterialsApp {
             this.elements.downloadText.textContent = `Download Class ${className} (All Materials)`;
         }
     }
-
     
+    /**
+     * Handle search input with debouncing
+     * @param {Event} e - Input event
+     */
     handleSearch(e) {
         clearTimeout(this.searchTimeout);
         this.searchTimeout = setTimeout(() => {
             this.searchTerm = e.target.value.trim();
             this.render();
-        }, CONFIG.SEARCH_DEBOUNCE_MS);
+        }, this.CONSTANTS.SEARCH_DEBOUNCE);
     }
     
+    /**
+     * Handle PDF item click
+     * @param {Event} e - Click event
+     */
     handlePdfClick(e) {
         const item = e.target.closest('.item');
         if (!item) return;
         
         e.preventDefault();
+        
         const pdfUrl = item.dataset.pdf;
-        const pdfName = item.querySelector('.item-name').textContent;
+        const pdfNameElement = item.querySelector('.item-name');
+        const pdfName = pdfNameElement ? pdfNameElement.textContent : 'Document';
+        
+        if (!pdfUrl) {
+            this.showNotification('PDF URL not found', 'error');
+            return;
+        }
         
         this.openModal(pdfUrl, pdfName);
     }
     
+    /**
+     * Open PDF modal viewer
+     * @param {string} url - PDF URL
+     * @param {string} title - PDF title
+     */
     openModal(url, title) {
-        // Decode the URL properly - handle double encoding
+        if (!this.elements.modal || !this.elements.pdfViewer) {
+            this.showNotification('Modal not available', 'error');
+            return;
+        }
+        
+        // Decode URL safely
         let decodedUrl = url;
         try {
             decodedUrl = decodeURIComponent(url);
         } catch (e) {
-            // Fallback to original URL if decoding fails
+            console.warn('URL decode failed, using original:', e);
             decodedUrl = url;
         }
         
         this.currentPdfUrl = decodedUrl;
-        this.elements.pdfTitle.textContent = title;
+        
+        if (this.elements.pdfTitle) {
+            this.elements.pdfTitle.textContent = this.sanitizeText(title);
+        }
+        
         this.elements.modal.classList.add('active');
         document.body.style.overflow = 'hidden';
         
+        // Focus close button for accessibility
+        setTimeout(() => {
+            this.elements.closeModal?.focus();
+        }, 100);
+        
+        // Check if mobile
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         
         if (isMobile) {
-            window.open(this.currentPdfUrl, '_blank');
+            // Open in new tab on mobile
+            window.open(this.currentPdfUrl, '_blank', 'noopener,noreferrer');
             this.closeModal();
         } else {
-            this.elements.pdfViewer.src = this.currentPdfUrl;
-            
-            const iframe = this.elements.pdfViewer;
-            const errorHandler = () => {
-                // Fallback: open PDF in new tab if iframe fails
-                window.open(this.currentPdfUrl, '_blank');
-                this.closeModal();
-            };
-            
-            const loadTimeout = setTimeout(() => {
-                try {
-                    if (!iframe.contentDocument && !iframe.contentWindow) {
-                        errorHandler();
-                    }
-                } catch (e) {
-                    // Cross-origin restriction - PDF is loading normally
-                }
-            }, 3000);
-            
-            iframe.onload = () => {
-                clearTimeout(loadTimeout);
-            };
-            
-            iframe.onerror = () => {
-                clearTimeout(loadTimeout);
-                errorHandler();
-            };
+            this.loadPdfInIframe(this.currentPdfUrl);
         }
     }
     
-    downloadCurrentPdf() {
-        if (!this.currentPdfUrl) return;
+    /**
+     * Load PDF in iframe with error handling
+     * @param {string} url - PDF URL
+     */
+    loadPdfInIframe(url) {
+        if (!this.elements.pdfViewer) return;
         
-        const link = document.createElement('a');
-        link.href = this.currentPdfUrl;
-        link.download = this.elements.pdfTitle.textContent + '.pdf';
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        this.elements.pdfViewer.src = url;
+        
+        let timeoutCleared = false;
+        
+        const errorHandler = () => {
+            if (timeoutCleared) return;
+            console.warn('PDF failed to load in iframe, opening in new tab');
+            window.open(url, '_blank', 'noopener,noreferrer');
+            this.closeModal();
+        };
+        
+        const loadTimeout = setTimeout(() => {
+            try {
+                // Check if iframe loaded
+                if (!this.elements.pdfViewer.contentDocument && !this.elements.pdfViewer.contentWindow) {
+                    errorHandler();
+                }
+            } catch (e) {
+                // Cross-origin restriction - PDF is loading normally
+            }
+        }, this.CONSTANTS.MODAL_LOAD_TIMEOUT);
+        
+        this.elements.pdfViewer.onload = () => {
+            timeoutCleared = true;
+            clearTimeout(loadTimeout);
+        };
+        
+        this.elements.pdfViewer.onerror = () => {
+            timeoutCleared = true;
+            clearTimeout(loadTimeout);
+            errorHandler();
+        };
     }
     
+    /**
+     * Download current PDF
+     */
+    downloadCurrentPdf() {
+        if (!this.currentPdfUrl) {
+            this.showNotification('No PDF selected', 'warning');
+            return;
+        }
+        
+        if (!this.isOnline) {
+            this.showNotification('You are offline', 'warning');
+            return;
+        }
+        
+        try {
+            const link = document.createElement('a');
+            link.href = this.currentPdfUrl;
+            const filename = this.elements.pdfTitle?.textContent || 'document';
+            link.download = `${filename}.pdf`;
+            link.rel = 'noopener noreferrer';
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            this.showNotification('Download started', 'success');
+        } catch (error) {
+            console.error('PDF download error:', error);
+            this.showNotification('Download failed', 'error');
+        }
+    }
+    
+    /**
+     * Close PDF modal
+     */
     closeModal() {
+        if (!this.elements.modal) return;
+        
         this.elements.modal.classList.remove('active');
-        this.elements.pdfViewer.src = '';
-        this.elements.pdfTitle.textContent = '';
+        
+        if (this.elements.pdfViewer) {
+            this.elements.pdfViewer.src = '';
+        }
+        
+        if (this.elements.pdfTitle) {
+            this.elements.pdfTitle.textContent = '';
+        }
+        
         this.currentPdfUrl = '';
         document.body.style.overflow = '';
+        
+        // Return focus to search
+        setTimeout(() => {
+            this.elements.searchInput?.focus();
+        }, 100);
     }
     
+    /**
+     * Render materials grid
+     */
     render() {
-        const materials = STUDY_MATERIALS[this.currentClass];
+        if (!this.elements.content) return;
+        
+        if (!window.STUDY_MATERIALS) {
+            this.elements.content.innerHTML = '<div class="empty">Study materials not loaded</div>';
+            return;
+        }
+        
+        const materials = window.STUDY_MATERIALS[this.currentClass];
         
         if (!materials) {
             this.elements.content.innerHTML = '<div class="empty">No materials available</div>';
@@ -242,14 +558,18 @@ class StudyMaterialsApp {
         const filtered = this.filterMaterials(materials);
         
         if (Object.keys(filtered).length === 0) {
-            this.elements.content.innerHTML = `<div class="empty">No results for "${this.escapeHtml(this.searchTerm)}"</div>`;
+            this.elements.content.innerHTML = `<div class="empty">No results for "${this.sanitizeText(this.searchTerm)}"</div>`;
             return;
         }
         
         this.elements.content.innerHTML = this.generateHTML(filtered);
     }
-
     
+    /**
+     * Filter materials based on search term
+     * @param {Object} materials - Materials object
+     * @returns {Object} Filtered materials
+     */
     filterMaterials(materials) {
         if (!this.searchTerm) return materials;
         
@@ -257,13 +577,18 @@ class StudyMaterialsApp {
         const lowerTerm = this.searchTerm.toLowerCase();
         
         Object.entries(materials).forEach(([subject, data]) => {
+            if (!data || !data.categories) return;
+            
             const filteredCategories = {};
             
             Object.entries(data.categories).forEach(([category, pdfs]) => {
+                if (!Array.isArray(pdfs)) return;
+                
                 const matchedPdfs = pdfs.filter(pdf => 
-                    pdf.name.toLowerCase().includes(lowerTerm) ||
+                    pdf && pdf.name &&
+                    (pdf.name.toLowerCase().includes(lowerTerm) ||
                     category.toLowerCase().includes(lowerTerm) ||
-                    subject.toLowerCase().includes(lowerTerm)
+                    subject.toLowerCase().includes(lowerTerm))
                 );
                 
                 if (matchedPdfs.length > 0) {
@@ -279,9 +604,17 @@ class StudyMaterialsApp {
         return result;
     }
     
+    /**
+     * Generate HTML for materials grid
+     * @param {Object} materials - Materials object
+     * @returns {string} HTML string
+     */
     generateHTML(materials) {
         const subjectsHTML = Object.entries(materials).map(([subject, data]) => {
-            const config = SUBJECT_CONFIG[subject];
+            const config = SUBJECT_CONFIG?.[subject] || { icon: '?', color: 'resources' };
+            
+            if (!data || !data.categories) return '';
+            
             const categoriesHTML = Object.entries(data.categories).map(([category, pdfs]) => 
                 this.generateCategoryHTML(category, pdfs)
             ).join('');
@@ -289,8 +622,8 @@ class StudyMaterialsApp {
             return `
                 <div class="subject">
                     <div class="subject-head">
-                        <div class="icon ${config.color}">${config.icon}</div>
-                        <h2 class="subject-title">${this.escapeHtml(subject)}</h2>
+                        <div class="icon ${this.sanitizeText(config.color)}" aria-hidden="true">${this.sanitizeText(config.icon)}</div>
+                        <h2 class="subject-title">${this.sanitizeText(subject)}</h2>
                     </div>
                     ${categoriesHTML}
                 </div>
@@ -299,16 +632,25 @@ class StudyMaterialsApp {
         
         return `<div class="grid">${subjectsHTML}</div>`;
     }
-
     
+    /**
+     * Generate HTML for a category
+     * @param {string} category - Category name
+     * @param {Array} pdfs - Array of PDF objects
+     * @returns {string} HTML string
+     */
     generateCategoryHTML(category, pdfs) {
+        if (!Array.isArray(pdfs)) return '';
+        
         const pdfsHTML = pdfs.map(pdf => {
+            if (!pdf || !pdf.file || !pdf.name) return '';
+            
             const encodedPath = pdf.file.split('/').map(part => encodeURIComponent(part)).join('/');
             return `
-            <a href="#" class="item" data-pdf="${this.escapeHtml(encodedPath)}">
-                <div class="pdf-badge">PDF</div>
-                <span class="item-name">${this.escapeHtml(pdf.name)}</span>
-                <svg class="arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <a href="#" class="item" data-pdf="${this.sanitizeAttribute(encodedPath)}" role="button" aria-label="Open ${this.sanitizeText(pdf.name)}">
+                <div class="pdf-badge" aria-hidden="true">PDF</div>
+                <span class="item-name">${this.sanitizeText(pdf.name)}</span>
+                <svg class="arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                 </svg>
             </a>
@@ -317,21 +659,100 @@ class StudyMaterialsApp {
         
         return `
             <div class="cat">
-                <div class="cat-title">${this.escapeHtml(category)}</div>
+                <div class="cat-title">${this.sanitizeText(category)}</div>
                 <div class="items">${pdfsHTML}</div>
             </div>
         `;
     }
     
-    escapeHtml(text) {
+    /**
+     * Sanitize text for HTML display (XSS protection)
+     * @param {string} text - Text to sanitize
+     * @returns {string} Sanitized text
+     */
+    sanitizeText(text) {
+        if (typeof text !== 'string') return '';
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
     }
     
-
+    /**
+     * Sanitize attribute value (XSS protection)
+     * @param {string} value - Attribute value to sanitize
+     * @returns {string} Sanitized value
+     */
+    sanitizeAttribute(value) {
+        if (typeof value !== 'string') return '';
+        return value.replace(/['"<>&]/g, (char) => {
+            const entities = {
+                '"': '&quot;',
+                "'": '&#39;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '&': '&amp;'
+            };
+            return entities[char] || char;
+        });
+    }
+    
+    /**
+     * Show notification toast
+     * @param {string} message - Message to display
+     * @param {string} type - Type (success, warning, error)
+     */
+    showNotification(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'polite');
+        toast.textContent = message;
+        
+        document.body.appendChild(toast);
+        
+        // Show toast
+        requestAnimationFrame(() => {
+            toast.classList.add('show');
+        });
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+    
+    /**
+     * Show error message
+     * @param {string} message - Error message
+     */
+    showError(message) {
+        console.error(message);
+        if (this.elements.content) {
+            this.elements.content.innerHTML = `<div class="empty error">${this.sanitizeText(message)}</div>`;
+        }
+    }
 }
 
+// Initialize app with error boundary
 document.addEventListener('DOMContentLoaded', () => {
-    new StudyMaterialsApp();
+    try {
+        window.app = new StudyMaterialsApp();
+    } catch (error) {
+        console.error('Failed to initialize app:', error);
+        const content = document.getElementById('content');
+        if (content) {
+            content.innerHTML = '<div class="empty error">Failed to load application. Please refresh the page.</div>';
+        }
+    }
+});
+
+// Global error handler
+window.addEventListener('error', (event) => {
+    console.error('Global error:', event.error);
+});
+
+// Unhandled promise rejection handler
+window.addEventListener('unhandledrejection', (event) => {
+    console.error('Unhandled promise rejection:', event.reason);
 });
