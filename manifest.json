@@ -4,8 +4,8 @@
   "description": "Access Class 11th and 12th study materials for Physics, Chemistry, and Mathematics",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#0a0a0a",
-  "theme_color": "#ff3366",
+  "background_color": "#0f0f0f",
+  "theme_color": "#ff4757",
   "orientation": "portrait-primary",
   "icons": [
     {
