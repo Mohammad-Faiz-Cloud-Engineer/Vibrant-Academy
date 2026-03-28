@@ -21,9 +21,6 @@ class StudyMaterialsApp {
             downloadPdf: document.getElementById('downloadPdf')
         };
         
-        // Add transition styles to content element
-        this.elements.content.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-        
         this.init();
     }
     
@@ -113,19 +110,7 @@ class StudyMaterialsApp {
         const classValue = btn.dataset.class;
         this.currentClass = classValue === 'others' ? 'others' : parseInt(classValue, 10);
         this.updateDownloadButton();
-        
-        // Smooth fade transition
-        this.elements.content.style.opacity = '0';
-        this.elements.content.style.transform = 'translateY(20px)';
-        
-        // Use setTimeout to allow CSS transition, then render
-        setTimeout(() => {
-            this.render();
-            requestAnimationFrame(() => {
-                this.elements.content.style.opacity = '1';
-                this.elements.content.style.transform = 'translateY(0)';
-            });
-        }, 150);
+        this.render();
     }
     
     handleDownload() {
@@ -262,7 +247,6 @@ class StudyMaterialsApp {
         }
         
         this.elements.content.innerHTML = this.generateHTML(filtered);
-        this.animateContent();
     }
 
     
@@ -345,29 +329,7 @@ class StudyMaterialsApp {
         return div.innerHTML;
     }
     
-    animateContent() {
-        // Use requestAnimationFrame for optimal performance
-        requestAnimationFrame(() => {
-            const subjects = this.elements.content.querySelectorAll('.subject');
-            
-            subjects.forEach((subject, subjectIndex) => {
-                // Stagger subject animations
-                subject.style.animationDelay = `${subjectIndex * 0.1}s`;
-                
-                const categories = subject.querySelectorAll('.cat');
-                categories.forEach((category, catIndex) => {
-                    // Stagger category animations within each subject
-                    category.style.animationDelay = `${(subjectIndex * 0.1) + (catIndex * 0.05)}s`;
-                    
-                    const items = category.querySelectorAll('.item');
-                    items.forEach((item, itemIndex) => {
-                        // Stagger item animations within each category
-                        item.style.animationDelay = `${(subjectIndex * 0.1) + (catIndex * 0.05) + (itemIndex * 0.02)}s`;
-                    });
-                });
-            });
-        });
-    }
+
 }
 
 document.addEventListener('DOMContentLoaded', () => {
