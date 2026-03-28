@@ -7,7 +7,7 @@
 class StudyMaterialsApp {
     constructor() {
         // Configuration
-        this.currentClass = CONFIG?.DEFAULT_CLASS || 11;
+        this.currentClass = window.CONFIG?.DEFAULT_CLASS || 11;
         this.searchTerm = '';
         this.searchTimeout = null;
         this.deferredPrompt = null;
@@ -19,7 +19,7 @@ class StudyMaterialsApp {
         this.CONSTANTS = {
             MODAL_LOAD_TIMEOUT: 3000,
             INSTALL_BANNER_DELAY: 100,
-            SEARCH_DEBOUNCE: CONFIG?.SEARCH_DEBOUNCE_MS || 300
+            SEARCH_DEBOUNCE: window.CONFIG?.SEARCH_DEBOUNCE_MS || 300
         };
         
         // Cache DOM elements
@@ -299,12 +299,12 @@ class StudyMaterialsApp {
      * Handle download button click
      */
     handleDownload() {
-        if (!CONFIG?.DOWNLOAD_PATHS) {
+        if (!window.CONFIG?.DOWNLOAD_PATHS) {
             this.showNotification('Download configuration not found', 'error');
             return;
         }
         
-        const zipPath = CONFIG.DOWNLOAD_PATHS[this.currentClass];
+        const zipPath = window.CONFIG.DOWNLOAD_PATHS[this.currentClass];
         
         if (!zipPath) {
             this.showNotification('Download not available for this class', 'warning');
@@ -598,7 +598,7 @@ class StudyMaterialsApp {
      */
     generateHTML(materials) {
         const subjectsHTML = Object.entries(materials).map(([subject, data]) => {
-            const config = SUBJECT_CONFIG?.[subject] || { icon: '?', color: 'resources' };
+            const config = window.SUBJECT_CONFIG?.[subject] || { icon: '?', color: 'resources' };
             
             if (!data || !data.categories) return '';
             
