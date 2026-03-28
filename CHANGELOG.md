@@ -11,9 +11,21 @@
   - Issue: Block-scoped const variables were not accessible as global window properties
   - Impact: App was unable to load study materials on initialization
 
+- **Performance:** Removed body opacity animation that caused forced layout warning
+  - Removed initial `opacity: 0` and `animation: fadeIn` from body element
+  - Prevents "Layout was forced before the page was fully loaded" warning
+  - Improves initial page load performance
+
 ### Changed
 - Improved global variable declarations for better cross-script accessibility
 - All configuration and data objects now properly attached to window object
+- Updated service worker cache version to v1.4.3
+- Added documentation comment about expected cookie warnings when loading PDFs in iframes
+
+### Technical Notes
+- Cookie/storage warnings in console when viewing PDFs are expected browser behavior
+- These warnings occur due to third-party context restrictions in iframes
+- Does not affect functionality - PDFs load and display correctly
 
 ## [1.4.2] - 2026-03-28
 
