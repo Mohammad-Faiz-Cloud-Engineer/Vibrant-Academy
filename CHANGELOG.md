@@ -1,5 +1,129 @@
 # Changelog
 
+## [1.4.1] - 2026-03-28
+
+### Fixed
+- **CORS Issues:** Added proper crossorigin attributes to font preconnect and stylesheet links
+- **Service Worker Errors:** 
+  - Updated cache version to v1.4.0
+  - Added error handling for failed cache operations
+  - Skip non-http(s) requests (chrome-extension, etc.)
+  - Improved error handling in fetch event
+  - Better cache.put error handling
+- **Font Loading:** Added comprehensive fallback font stack (Inter → System fonts)
+- **Theme Colors:** Updated manifest.json theme colors to match new design (#ff4757, #0f0f0f)
+- **Cache Headers:** Removed aggressive no-cache headers that were causing issues
+
+### Technical Details
+- Service worker now gracefully handles cache failures
+- Font loading won't block page render if Google Fonts fail
+- CORS properly configured for cross-origin resources
+- Better error handling throughout service worker lifecycle
+
+## [1.4.0] - 2026-03-28
+
+### Changed - Premium UI/UX Redesign
+- **Typography Overhaul:**
+  - Switched from DM Sans/Space Grotesk to Inter for a more professional, human-crafted feel
+  - Improved font rendering with optimizeLegibility and font-feature-settings
+  - Better letter-spacing and line-height for enhanced readability
+  - Refined font weights (400, 500, 600, 700) for proper hierarchy
+
+- **Color System Refinement:**
+  - Expanded color palette with semantic naming (--text-secondary, --text-tertiary)
+  - Added dedicated background colors (--bg-elevated, --surface, --card)
+  - Refined accent colors with hover states (--accent-hover)
+  - Subject-specific background colors for better visual distinction
+  - Improved border colors with hover states (--border, --border-hover)
+  - Professional shadow system (--shadow-sm through --shadow-xl)
+
+- **Component Redesign:**
+  - Navigation: Refined backdrop blur (24px), improved shadow depth
+  - Search: Added search icon, inset shadow, focus ring effect
+  - Tabs: Subtle background with inset shadow, refined active state
+  - Subject Cards: Reduced border radius (16px), improved hover lift (4px)
+  - Icons: Larger size (44px), subtle borders, refined hover scale (1.08x)
+  - PDF Items: Left accent bar on hover, improved spacing, better typography
+  - PDF Badge: Larger (32px), refined gradient, better shadow
+  - Download Button: Refined gradient overlay, improved shadow depth
+  - Modal: Better header shadow, refined button sizes (36px)
+
+- **Spacing & Layout:**
+  - Consistent padding system (32px desktop, 24px tablet, 20px mobile)
+  - Improved max-width (1280px) for better readability
+  - Better gap spacing throughout (14px, 18px, 20px, 24px)
+  - Refined grid system (auto-fill, minmax(360px, 1fr))
+
+- **Micro-Interactions:**
+  - Refined cubic-bezier easing (0.4, 0, 0.2, 1) for smoother animations
+  - Better hover states with subtle color transitions
+  - Improved focus states with ring effects
+  - Refined transform values for more natural movement
+  - Better button press feedback
+
+- **Visual Hierarchy:**
+  - Clearer distinction between primary, secondary, and tertiary text
+  - Better use of opacity for depth perception
+  - Improved contrast ratios for accessibility
+  - Refined border usage for subtle separation
+  - Better shadow usage for elevation
+
+### Technical Improvements
+- Removed unnecessary pseudo-elements and overlays
+- Simplified CSS with better use of CSS variables
+- Improved performance with optimized selectors
+- Better mobile responsiveness with refined breakpoints
+- Maintained zero console statements and zero vulnerabilities
+
+### Design Philosophy
+- Human-crafted feel: Intentional spacing, refined typography, thoughtful details
+- Premium aesthetic: Subtle shadows, refined colors, professional polish
+- Functional beauty: Every design decision serves usability
+- Accessibility-first: Proper contrast, readable text, clear hierarchy
+
+## [1.3.0] - 2026-03-28
+
+### Added
+- **Real-time Generation Animations:** Sophisticated staggered animations create a "generating in real-time" effect
+  - Page elements animate in sequentially on load (nav → hero → content)
+  - Subjects, categories, and items animate with cascading delays
+  - Smooth fade transitions when switching between classes
+  - Modal animations with scale and fade effects
+  - Enhanced button hover states with micro-interactions
+  
+- **Performance Optimizations:**
+  - Hardware acceleration using `transform: translateZ(0)` and `backface-visibility: hidden`
+  - `will-change` property for optimized animations
+  - `requestAnimationFrame` for smooth 60fps animations
+  - Respects `prefers-reduced-motion` for accessibility
+  
+- **Enhanced Interactions:**
+  - Download button icon bounces on hover
+  - Close button rotates 90° on hover
+  - PDF badge scales and glows on hover
+  - Subject icons rotate and scale on hover
+  - Tab buttons with smooth background transitions
+  - Search input lifts with shadow on focus
+  
+- **Smooth Transitions:**
+  - Content fades out/in when switching classes (300ms)
+  - Modal overlay fades in (200ms)
+  - Modal content scales in (300ms)
+  - Install banner slides up from bottom
+
+### Changed
+- Increased app.js from 334 to 374 lines (animation logic)
+- Increased styles.css from 634 to 908 lines (animation styles)
+- All animations use CSS for optimal performance
+- Staggered delays calculated dynamically in JavaScript
+
+### Technical Details
+- Zero performance impact: animations use GPU-accelerated properties (transform, opacity)
+- Accessibility-first: respects user's motion preferences
+- No layout shifts: animations use transform instead of position changes
+- Optimized rendering: uses `requestAnimationFrame` for smooth animations
+- Security maintained: zero console statements, zero vulnerabilities
+
 ## [1.2.6] - 2026-03-26
 
 ### Fixed
