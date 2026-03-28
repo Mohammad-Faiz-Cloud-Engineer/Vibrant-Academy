@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.4.3] - 2026-03-28
+
+### Fixed
+- **CRITICAL BUG:** Fixed "Study materials not loaded" error
+  - Changed `const STUDY_MATERIALS` to `window.STUDY_MATERIALS` in data.js
+  - Changed `const CONFIG` to `window.CONFIG` in config.js
+  - Changed `const SUBJECT_CONFIG` to `window.SUBJECT_CONFIG` in config.js
+  - Updated all references in app.js to explicitly use `window.CONFIG` and `window.SUBJECT_CONFIG`
+  - Issue: Block-scoped const variables were not accessible as global window properties
+  - Impact: App was unable to load study materials on initialization
+
+### Changed
+- Improved global variable declarations for better cross-script accessibility
+- All configuration and data objects now properly attached to window object
+
 ## [1.4.2] - 2026-03-28
 
 ### Added
