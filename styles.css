@@ -43,8 +43,6 @@ body {
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
     overscroll-behavior-y: contain;
-    opacity: 0;
-    animation: fadeIn 0.6s ease-out forwards;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
