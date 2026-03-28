@@ -416,16 +416,49 @@ class StudyMaterialsApp {
             this.elements.closeModal?.focus();
         }, 100);
         
-        // Check if mobile
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        // Detect mobile and tablet devices
+        const isMobileOrTablet = this.isMobileOrTabletDevice();
         
-        if (isMobile) {
-            // Open in new tab on mobile
+        if (isMobileOrTablet) {
+            // Open in new tab on mobile and tablet devices
             window.open(this.currentPdfUrl, '_blank', 'noopener,noreferrer');
             this.closeModal();
         } else {
             this.loadPdfInIframe(this.currentPdfUrl);
         }
+    }
+    
+    /**
+     * Detect if device is mobile or tablet (not desktop)
+     * @returns {boolean} True if mobile or tablet device
+     */
+    isMobileOrTabletDevice() {
+        const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+        
+        // Check for mobile/tablet user agents
+        const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+        if (mobileRegex.test(userAgent)) {
+            return true;
+        }
+        
+        // Check for tablet-specific indicators
+        // Modern tablets often have "Mobile" in user agent but with larger screens
+        const isAndroidTablet = /Android/i.test(userAgent) && !/Mobile/i.test(userAgent);
+        if (isAndroidTablet) {
+            return true;
+        }
+        
+        // Check screen size as additional indicator
+        // Tablets typically have width between 768px and 1024px
+        const screenWidth = window.innerWidth || document.documentElement.clientWidth;
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        
+        // If touch device with tablet-like screen size, treat as tablet
+        if (isTouchDevice && screenWidth >= 600 && screenWidth <= 1024) {
+            return true;
+        }
+        
+        return false;
     }
     
     /**
