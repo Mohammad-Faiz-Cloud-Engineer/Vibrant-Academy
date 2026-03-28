@@ -1,4 +1,4 @@
-const STUDY_MATERIALS = {
+window.STUDY_MATERIALS = {
     11: {
         Physics: {
             categories: {
