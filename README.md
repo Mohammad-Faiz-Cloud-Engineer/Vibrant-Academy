@@ -172,10 +172,24 @@ vibrant-academy/
     │   ├── Physics/
     │   ├── Chemistry/
     │   └── Mathematics/
-    └── Others/
-        ├── College Information PDFs
-        └── CSE/
-            └── Computer Science Resources
+    └── ├── Others/
+    │   ├── BTech CSE.pdf               # BTech CSE program guide
+    │   ├── College List.pdf            # Comprehensive college information
+    │   ├── College List(CUET).pdf      # CUET-specific college list
+    │   ├── Engineering_Entrance_Exams_Guide.pdf
+    │   └── CSE/                        # 8 Computer Science resources
+    │       ├── Cloud Computing.pdf
+    │       ├── DevOps Cloud.pdf
+    │       ├── Dorking Encyclopedia.pdf
+    │       ├── DSA & Algorithms C++ Edition.pdf
+    │       ├── DSA & Algorithms Multi-Language Edition.pdf
+    │       ├── Interview Preparation.pdf
+    │       ├── OOP Multi-Language Edition.pdf
+    │       └── System Design.pdf
+    ├── Class 11th (Modules).zip        # Complete Class 11 materials archive
+    └── Class 12th (Modules).zip        # Complete Class 12 materials archive
+
+Total: 100 PDF study materials across all categories
 ```
 
 ### Key Components
