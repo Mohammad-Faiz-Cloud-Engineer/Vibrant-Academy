@@ -10,6 +10,9 @@
   - Prevents potential CORS-related font loading issues
   - Follows Google Fonts best practices
 
+### Changed
+- Updated service worker cache version to v1.4.4
+
 ### Technical Details
 - Google Fonts requires crossorigin only on gstatic.com (font files), not googleapis.com (CSS)
 - Stylesheet links don't need crossorigin unless using credentials
