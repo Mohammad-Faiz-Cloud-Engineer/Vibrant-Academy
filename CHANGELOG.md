@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.5.2] - 2026-03-30
+
+### Fixed
+- Removed emoji from CSS error state (replaced with standard Unicode character)
+- Deleted empty .vscode/settings.json file
+
+### Changed
+- Service worker cache bumped to v1.5.2
+
 ## [1.5.1] - 2026-03-30
 
 ### Fixed
@@ -9,16 +18,25 @@
 - Removed animate-in classes that were causing forced layout calculations
 - Page now renders immediately without waiting for animations
 
+### Added
+- Disabled long-press/touch-and-hold context menu on mobile devices
+- Added `-webkit-touch-callout: none` to prevent iOS callout menu
+- Added `-webkit-tap-highlight-color: transparent` to remove tap highlight
+- JavaScript prevention of long-press events (500ms threshold)
+- Disabled image dragging and context menus
+
 ### Changed
 - Fonts load asynchronously using media="print" trick with onload handler
 - Added preload hint for Inter font
 - Service worker cache updated to v1.5.1
+- All elements now have touch callout disabled
 
 ### Performance
 - Eliminated forced layout warnings
 - Faster initial page render
 - No more flash of invisible content (FOIC)
 - Improved Lighthouse performance score
+- Better native app feel on mobile devices
 
 ## [1.5.0] - 2026-03-30
 
