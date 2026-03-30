@@ -117,7 +117,7 @@ The application loads instantly and can be used immediately. Use the search bar 
 
 ```bash
 # Clone the repository
-git clone https://github.com/god-hand1/Vibrant-Academy.git
+git clone https://github.com/Mohammad-Faiz-Cloud-Engineer/Vibrant-Academy.git
 cd Vibrant-Academy
 
 # Serve using Python 3
