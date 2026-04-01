@@ -1,4 +1,3 @@
-
 'use strict';
 
 /**
@@ -235,11 +234,17 @@ class StudyMaterialsApp {
         
         try {
             await this.deferredPrompt.prompt();
-            await this.deferredPrompt.userChoice;
+            const choiceResult = await this.deferredPrompt.userChoice;
+            
+            if (choiceResult.outcome === 'accepted') {
+                this.showNotification('App will be installed', 'success');
+            }
+            
             this.deferredPrompt = null;
             this.hideInstallPrompt();
         } catch (error) {
-            this.showNotification('Installation failed', 'error');
+            this.deferredPrompt = null;
+            this.hideInstallPrompt();
         }
     }
     
@@ -263,10 +268,20 @@ class StudyMaterialsApp {
         btn.classList.add('active');
         
         const classValue = btn.dataset.class;
-        this.currentClass = (classValue === 'others' || classValue === 'prompts') ? classValue : parseInt(classValue, 10);
+        this.currentClass = (classValue === 'others' || classValue === 'prompts' || classValue === 'music') ? classValue : parseInt(classValue, 10);
         
         this.updateDownloadButton();
-        this.render();
+        
+        if (this.currentClass === 'music') {
+            if (window.musicApp) {
+                window.musicApp.render();
+            }
+        } else {
+            if (window.musicApp) {
+                window.musicApp.closePlayer();
+            }
+            this.render();
+        }
     }
     
     handleDownload() {
@@ -290,7 +305,17 @@ class StudyMaterialsApp {
         try {
             const link = document.createElement('a');
             link.href = zipPath;
-            link.download = `Class_${this.currentClass}_Modules.zip`;
+            
+            let filename;
+            if (this.currentClass === 'music') {
+                filename = 'Songs.zip';
+            } else if (this.currentClass === 11 || this.currentClass === 12) {
+                filename = `Class_${this.currentClass}th_Modules.zip`;
+            } else {
+                filename = `${this.currentClass}_Materials.zip`;
+            }
+            
+            link.download = filename;
             link.rel = 'noopener noreferrer';
             link.style.display = 'none';
             document.body.appendChild(link);
@@ -308,6 +333,9 @@ class StudyMaterialsApp {
         
         if (this.currentClass === 'others' || this.currentClass === 'prompts') {
             this.elements.downloadBtn.style.display = 'none';
+        } else if (this.currentClass === 'music') {
+            this.elements.downloadBtn.style.display = 'flex';
+            this.elements.downloadText.textContent = 'Download All Songs';
         } else {
             this.elements.downloadBtn.style.display = 'flex';
             const className = this.currentClass === 11 ? '11th' : '12th';
@@ -319,7 +347,11 @@ class StudyMaterialsApp {
         clearTimeout(this.searchTimeout);
         this.searchTimeout = setTimeout(() => {
             this.searchTerm = e.target.value.trim();
-            this.render();
+            if (this.currentClass === 'music' && window.musicApp) {
+                window.musicApp.render();
+            } else {
+                this.render();
+            }
         }, this.CONSTANTS.SEARCH_DEBOUNCE);
     }
     
@@ -734,10 +766,18 @@ class StudyMaterialsApp {
             toast.classList.add('show');
         });
         
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 300);
-        }, 3000);
+        const removeToast = () => {
+            if (toast.parentNode) {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.remove();
+                    }
+                }, 300);
+            }
+        };
+        
+        setTimeout(removeToast, 3000);
     }
     
     showError(message) {
