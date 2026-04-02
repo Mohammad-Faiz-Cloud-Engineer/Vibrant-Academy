@@ -83,7 +83,7 @@ The platform serves two primary audiences: secondary school students preparing f
 
 ### Web Access
 
-Visit the live application at: https://Mohammad-Faiz-Cloud-Engineer.github.io/Vibrant-Academy/
+Visit the live application at: https://god-hand1.github.io/Vibrant-Academy/
 
 The application loads instantly and can be used immediately. Use the search bar to locate specific topics, and click any material to view it in the integrated PDF viewer. On mobile devices, PDFs open in a new tab for optimal viewing experience.
 
@@ -117,7 +117,7 @@ The application loads instantly and can be used immediately. Use the search bar 
 
 ```bash
 # Clone the repository
-git clone https://github.com/Mohammad-Faiz-Cloud-Engineer/Vibrant-Academy.git
+git clone https://github.com/god-hand1/Vibrant-Academy.git
 cd Vibrant-Academy
 
 # Serve using Python 3
