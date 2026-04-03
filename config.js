@@ -5,9 +5,7 @@ window.CONFIG = {
     GITHUB_REPO: 'Mohammad-Faiz-Cloud-Engineer/Vibrant-Academy',
     GITHUB_BRANCH: 'main',
     // Check if running on GitHub Pages (production)
-    IS_PRODUCTION: window.location.hostname === 'god-hand1.github.io' || 
-                   window.location.hostname === 'mohammad-faiz-cloud-engineer.github.io' ||
-                   window.location.hostname.endsWith('.github.io'),
+    IS_PRODUCTION: window.location.hostname === 'mohammad-faiz-cloud-engineer.github.io' || window.location.hostname.endsWith('.github.io'),
     DOWNLOAD_PATHS: {
         11: 'https://github.com/Mohammad-Faiz-Cloud-Engineer/Vibrant-Academy/releases/download/V1.0.0/Class.11th.Modules.zip',
         12: 'https://github.com/Mohammad-Faiz-Cloud-Engineer/Vibrant-Academy/releases/download/V1.0.0/Class.12th.Modules.zip',
