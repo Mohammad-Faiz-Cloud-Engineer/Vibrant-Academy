@@ -2,7 +2,7 @@ window.CONFIG = {
     SEARCH_DEBOUNCE_MS: 300,
     DEFAULT_CLASS: 11,
     // GitHub repository info for accessing media files
-    GITHUB_REPO: 'God-Hand1/Vibrant-Academy',
+    GITHUB_REPO: 'Mohammad-Faiz-Cloud-Engineer/Vibrant-Academy',
     GITHUB_BRANCH: 'main',
     // Check if running on GitHub Pages (production)
     IS_PRODUCTION: window.location.hostname === 'god-hand1.github.io' || 
