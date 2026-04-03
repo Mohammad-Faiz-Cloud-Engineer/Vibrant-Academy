@@ -36,6 +36,8 @@ class StudyMaterialsApp {
             searchInput: document.getElementById('searchInput'),
             downloadBtn: document.getElementById('downloadBtn'),
             downloadText: document.getElementById('downloadText'),
+            viewToggleBtn: document.getElementById('viewToggleBtn'),
+            viewToggleIcon: document.getElementById('viewToggleIcon'),
             modal: document.getElementById('pdfModal'),
             pdfViewer: document.getElementById('pdfViewer'),
             pdfTitle: document.getElementById('pdfTitle'),
@@ -59,6 +61,7 @@ class StudyMaterialsApp {
         try {
             // Verify config is loaded
             if (!window.SUBJECT_CONFIG) {
+                console.error('SUBJECT_CONFIG not loaded! Defining fallback...');
                 window.SUBJECT_CONFIG = {
                     Physics: { icon: 'P', color: 'physics' },
                     Chemistry: { icon: 'C', color: 'chemistry' },
@@ -73,7 +76,6 @@ class StudyMaterialsApp {
             this.setupPWA();
             this.setupOnlineDetection();
             this.updateDownloadButton();
-            this.restoreViewMode();
             this.render();
         } catch (error) {
             this.showError('Failed to initialize application');
@@ -93,10 +95,8 @@ class StudyMaterialsApp {
             this.elements.downloadBtn.addEventListener('click', () => this.handleDownload());
         }
         
-        // View toggle button
-        const viewToggle = document.getElementById('viewToggle');
-        if (viewToggle) {
-            viewToggle.addEventListener('click', () => this.toggleView());
+        if (this.elements.viewToggleBtn) {
+            this.elements.viewToggleBtn.addEventListener('click', () => this.handleViewToggle());
         }
         
         document.addEventListener('click', (e) => this.handleItemClick(e));
@@ -127,51 +127,6 @@ class StudyMaterialsApp {
         }
         
         document.addEventListener('keydown', (e) => this.handleKeyboard(e));
-    }
-    
-    toggleView() {
-        const viewToggle = document.getElementById('viewToggle');
-        if (!viewToggle) return;
-        
-        const currentMode = viewToggle.dataset.mode;
-        const newMode = currentMode === 'grid' ? 'list' : 'grid';
-        
-        viewToggle.dataset.mode = newMode;
-        localStorage.setItem('music-view-mode', newMode);
-        
-        const gridIcon = viewToggle.querySelector('.grid-icon');
-        const listIcon = viewToggle.querySelector('.list-icon');
-        
-        if (newMode === 'list') {
-            if (gridIcon) gridIcon.style.display = 'none';
-            if (listIcon) listIcon.style.display = 'block';
-        } else {
-            if (gridIcon) gridIcon.style.display = 'block';
-            if (listIcon) listIcon.style.display = 'none';
-        }
-        
-        if (window.musicApp) {
-            window.musicApp.render();
-        }
-    }
-    
-    restoreViewMode() {
-        const viewToggle = document.getElementById('viewToggle');
-        if (!viewToggle) return;
-        
-        const savedMode = localStorage.getItem('music-view-mode') || 'grid';
-        viewToggle.dataset.mode = savedMode;
-        
-        const gridIcon = viewToggle.querySelector('.grid-icon');
-        const listIcon = viewToggle.querySelector('.list-icon');
-        
-        if (savedMode === 'list') {
-            if (gridIcon) gridIcon.style.display = 'none';
-            if (listIcon) listIcon.style.display = 'block';
-        } else {
-            if (gridIcon) gridIcon.style.display = 'block';
-            if (listIcon) listIcon.style.display = 'none';
-        }
     }
     
     handleKeyboard(e) {
@@ -266,13 +221,11 @@ class StudyMaterialsApp {
         actionsDiv.className = 'install-actions';
         
         const installBtn = document.createElement('button');
-        installBtn.type = 'button';
         installBtn.className = 'install-btn';
         installBtn.textContent = 'Install';
         installBtn.setAttribute('aria-label', 'Install application');
         
         const dismissBtn = document.createElement('button');
-        dismissBtn.type = 'button';
         dismissBtn.className = 'dismiss-btn';
         dismissBtn.textContent = '×';
         dismissBtn.setAttribute('aria-label', 'Dismiss install prompt');
@@ -338,7 +291,6 @@ class StudyMaterialsApp {
         this.updateDownloadButton();
         
         if (this.currentClass === 'music') {
-            this.restoreViewMode();
             if (window.musicApp) {
                 window.musicApp.render();
             }
@@ -397,20 +349,62 @@ class StudyMaterialsApp {
     updateDownloadButton() {
         if (!this.elements.downloadBtn || !this.elements.downloadText) return;
         
-        const viewToggle = document.getElementById('viewToggle');
-        
         if (this.currentClass === 'others' || this.currentClass === 'prompts') {
             this.elements.downloadBtn.style.display = 'none';
-            if (viewToggle) viewToggle.style.display = 'none';
+            if (this.elements.viewToggleBtn) {
+                this.elements.viewToggleBtn.style.display = 'none';
+            }
         } else if (this.currentClass === 'music') {
             this.elements.downloadBtn.style.display = 'flex';
-            this.elements.downloadText.textContent = 'Download All Songs';
-            if (viewToggle) viewToggle.style.display = 'flex';
+            this.elements.downloadText.textContent = 'Download All';
+            if (this.elements.viewToggleBtn) {
+                this.elements.viewToggleBtn.style.display = 'flex';
+                this.updateViewToggleIcon();
+            }
         } else {
             this.elements.downloadBtn.style.display = 'flex';
             const className = this.currentClass === 11 ? '11th' : '12th';
             this.elements.downloadText.textContent = `Download Class ${className} (All Materials)`;
-            if (viewToggle) viewToggle.style.display = 'none';
+            if (this.elements.viewToggleBtn) {
+                this.elements.viewToggleBtn.style.display = 'none';
+            }
+        }
+    }
+    
+    handleViewToggle() {
+        if (window.musicApp && this.currentClass === 'music') {
+            window.musicApp.toggleViewMode();
+            this.updateViewToggleIcon();
+        }
+    }
+    
+    updateViewToggleIcon() {
+        if (!this.elements.viewToggleIcon || !window.musicApp) return;
+        
+        const isGridView = window.musicApp.viewMode === 'grid';
+        
+        if (isGridView) {
+            // Show list icon (to switch to list view)
+            this.elements.viewToggleIcon.innerHTML = `
+                <line x1="8" y1="6" x2="21" y2="6"></line>
+                <line x1="8" y1="12" x2="21" y2="12"></line>
+                <line x1="8" y1="18" x2="21" y2="18"></line>
+                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+            `;
+            this.elements.viewToggleBtn.setAttribute('title', 'Switch to list view');
+            this.elements.viewToggleBtn.setAttribute('aria-label', 'Switch to list view');
+        } else {
+            // Show grid icon (to switch to grid view)
+            this.elements.viewToggleIcon.innerHTML = `
+                <rect x="3" y="3" width="7" height="7"></rect>
+                <rect x="14" y="3" width="7" height="7"></rect>
+                <rect x="14" y="14" width="7" height="7"></rect>
+                <rect x="3" y="14" width="7" height="7"></rect>
+            `;
+            this.elements.viewToggleBtn.setAttribute('title', 'Switch to grid view');
+            this.elements.viewToggleBtn.setAttribute('aria-label', 'Switch to grid view');
         }
     }
     
@@ -441,20 +435,10 @@ class StudyMaterialsApp {
             return;
         }
         
-        // Decode the URL and apply production URL transformation
-        let decodedUrl;
-        try {
-            decodedUrl = decodeURIComponent(fileUrl);
-        } catch (e) {
-            decodedUrl = fileUrl;
-        }
-        
-        const fullUrl = window.CONFIG?.getFileUrl ? window.CONFIG.getFileUrl(decodedUrl) : decodedUrl;
-        
-        if (fullUrl.endsWith('.txt')) {
-            this.openTextModal(fullUrl, fileName);
+        if (fileUrl.endsWith('.txt')) {
+            this.openTextModal(fileUrl, fileName);
         } else {
-            this.openPdfModal(fullUrl, fileName);
+            this.openPdfModal(fileUrl, fileName);
         }
     }
     
@@ -505,6 +489,7 @@ class StudyMaterialsApp {
         try {
             decodedUrl = decodeURIComponent(url);
         } catch (decodeError) {
+            // URL already decoded or malformed - use as-is
             decodedUrl = url;
         }
         
@@ -512,20 +497,21 @@ class StudyMaterialsApp {
             this.elements.textTitle.textContent = title;
         }
         
+        this.elements.textModal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        
         try {
             const response = await fetch(decodedUrl);
             if (!response.ok) throw new Error('Failed to load text');
             const text = await response.text();
             this.elements.textViewer.textContent = text;
             
-            this.elements.textModal.classList.add('active');
-            document.body.style.overflow = 'hidden';
-            
             setTimeout(() => {
                 this.elements.closeTextModal?.focus();
             }, 100);
         } catch (error) {
             this.showNotification('Failed to load text file', 'error');
+            this.closeTextModal();
         }
     }
     
