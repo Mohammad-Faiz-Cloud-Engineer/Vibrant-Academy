@@ -4,6 +4,12 @@ const CACHE_NAME = 'vibrant-academy-v1.9.0';
 const RUNTIME_CACHE = 'vibrant-academy-runtime';
 const CACHE_VERSION = '1.9.0';
 
+// Allowed external hosts for security
+const ALLOWED_HOSTS = new Set([
+    'fonts.googleapis.com',
+    'fonts.gstatic.com'
+]);
+
 // Core assets to cache on install
 const ASSETS_TO_CACHE = [
     './',
@@ -17,6 +23,22 @@ const ASSETS_TO_CACHE = [
     './icon/logo.png',
     './manifest.json'
 ];
+
+/**
+ * Validates if a URL is from an allowed origin
+ * @param {URL} url - The URL object to validate
+ * @param {URL} selfLocation - The service worker's location
+ * @returns {boolean} - True if URL is allowed
+ */
+function isAllowedOrigin(url, selfLocation) {
+    // Same origin is always allowed
+    if (url.origin === selfLocation.origin) {
+        return true;
+    }
+    
+    // Check against allowed hosts
+    return ALLOWED_HOSTS.has(url.hostname);
+}
 
 /**
  * Install event - cache core assets
@@ -65,18 +87,22 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Skip non-http(s) requests
-    if (!request.url.startsWith('http')) {
+    // Parse and validate URL
+    let url;
+    try {
+        url = new URL(request.url);
+    } catch (error) {
+        // Invalid URL, skip
         return;
     }
 
-    const url = new URL(request.url);
-    const isOwnOrigin = url.origin === self.location.origin;
-    const isFontOrResource = request.url.includes('fonts.googleapis.com') ||
-                             request.url.includes('fonts.gstatic.com');
+    // Only handle http(s) protocols
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+        return;
+    }
 
-    // Skip cross-origin requests (except fonts and external resources)
-    if (!isOwnOrigin && !isFontOrResource) {
+    // Validate origin against allowlist
+    if (!isAllowedOrigin(url, self.location)) {
         return;
     }
 
