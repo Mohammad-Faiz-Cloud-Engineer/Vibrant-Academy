@@ -10,24 +10,10 @@
     AddType text/javascript .js
 </IfModule>
 
-# NO CACHE - Always serve fresh content from server
+# Cache control for PWA
 <IfModule mod_headers.c>
-    # Disable all caching for HTML files
+    # HTML files - no cache
     <FilesMatch "\.(html|htm)$">
-        Header set Cache-Control "no-cache, no-store, must-revalidate, max-age=0"
-        Header set Pragma "no-cache"
-        Header set Expires "0"
-    </FilesMatch>
-    
-    # Disable caching for JavaScript files
-    <FilesMatch "\.(js)$">
-        Header set Cache-Control "no-cache, no-store, must-revalidate, max-age=0"
-        Header set Pragma "no-cache"
-        Header set Expires "0"
-    </FilesMatch>
-    
-    # Disable caching for CSS files
-    <FilesMatch "\.(css)$">
         Header set Cache-Control "no-cache, no-store, must-revalidate, max-age=0"
         Header set Pragma "no-cache"
         Header set Expires "0"
@@ -49,37 +35,54 @@
         Header set Content-Type "application/manifest+json"
     </FilesMatch>
     
-    # JSON data files - no cache
-    <FilesMatch "\.(json)$">
+    # JavaScript and CSS - no cache for dynamic updates
+    <FilesMatch "\.(js|css)$">
         Header set Cache-Control "no-cache, no-store, must-revalidate, max-age=0"
         Header set Pragma "no-cache"
         Header set Expires "0"
     </FilesMatch>
     
-    # Images - minimal cache (1 hour)
-    <FilesMatch "\.(jpg|jpeg|png|gif|ico|svg)$">
-        Header set Cache-Control "max-age=3600, must-revalidate"
+    # Data files - no cache
+    <FilesMatch "\.(json|xml)$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate, max-age=0"
+        Header set Pragma "no-cache"
+        Header set Expires "0"
     </FilesMatch>
     
-    # Fonts - minimal cache (1 hour)
-    <FilesMatch "\.(woff|woff2|ttf|eot)$">
-        Header set Cache-Control "max-age=3600, must-revalidate"
+    # Static media assets - short cache for updates
+    <FilesMatch "\.(jpg|jpeg|png|gif|ico|svg|webp)$">
+        Header set Cache-Control "no-cache, must-revalidate, max-age=0"
     </FilesMatch>
     
-    # PDFs and media - minimal cache (1 hour)
-    <FilesMatch "\.(pdf|mp3|mp4|webm)$">
-        Header set Cache-Control "max-age=3600, must-revalidate"
+    # Font files - short cache
+    <FilesMatch "\.(woff|woff2|ttf|eot|otf)$">
+        Header set Cache-Control "no-cache, must-revalidate, max-age=0"
+    </FilesMatch>
+    
+    # PDF files - no cache
+    <FilesMatch "\.(pdf)$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate, max-age=0"
+        Header set Pragma "no-cache"
+        Header set Expires "0"
+    </FilesMatch>
+    
+    # Audio files - no cache
+    <FilesMatch "\.(mp3|wav|ogg|m4a)$">
+        Header set Cache-Control "no-cache, must-revalidate, max-age=0"
     </FilesMatch>
 </IfModule>
 
 # Security headers
 <IfModule mod_headers.c>
-    Header set X-Content-Type-Options "nosniff"
-    Header set X-Frame-Options "SAMEORIGIN"
-    Header set X-XSS-Protection "1; mode=block"
-    Header set Referrer-Policy "strict-origin-when-cross-origin"
-    Header set Permissions-Policy "geolocation=(), microphone=(), camera=()"
-    Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; frame-src 'self'; connect-src 'self'"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; frame-src 'self'; connect-src 'self'; media-src 'self'"
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" env=HTTPS
+    Header always unset X-Powered-By
+    Header always unset Server
 </IfModule>
 
 # Compression
