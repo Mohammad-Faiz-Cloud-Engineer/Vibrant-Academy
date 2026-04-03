@@ -13,8 +13,9 @@ class MusicApp {
         this.isShuffle = false;
         this.isRepeat = false;
         this.audio = new Audio();
-        this._lastDownloadTime = 0;
-        this._isTogglingPlay = false;
+        this._lastDownloadTime = 0; // Rate limiting for downloads
+        this.viewMode = this.loadViewMode(); // 'grid' or 'list'
+        this.expandedPlaylists = new Set(); // Track expanded playlists
 
         this.elements = {
             player: document.getElementById('musicPlayer'),
@@ -38,26 +39,76 @@ class MusicApp {
         this.init();
     }
 
+    loadViewMode() {
+        try {
+            return localStorage.getItem('musicViewMode') || 'grid';
+        } catch (e) {
+            return 'grid';
+        }
+    }
+
+    saveViewMode(mode) {
+        try {
+            localStorage.setItem('musicViewMode', mode);
+        } catch (e) {
+            // Silently fail if localStorage is not available
+        }
+    }
+
+    toggleViewMode() {
+        this.viewMode = this.viewMode === 'grid' ? 'list' : 'grid';
+        this.saveViewMode(this.viewMode);
+        this.render();
+    }
+
+    togglePlaylist(folder) {
+        const wasExpanded = this.expandedPlaylists.has(folder);
+        
+        if (wasExpanded) {
+            this.expandedPlaylists.delete(folder);
+        } else {
+            this.expandedPlaylists.add(folder);
+        }
+        
+        // Update only the specific playlist instead of re-rendering everything
+        const playlistElement = document.querySelector(`.playlist[data-folder="${folder}"]`);
+        if (playlistElement) {
+            if (wasExpanded) {
+                playlistElement.classList.remove('expanded');
+            } else {
+                playlistElement.classList.add('expanded');
+            }
+        }
+    }
+
+    getPlaylists() {
+        const playlists = {};
+        this.library.forEach(song => {
+            const folder = song.folder || 'Unknown';
+            if (!playlists[folder]) {
+                playlists[folder] = [];
+            }
+            playlists[folder].push(song);
+        });
+        return playlists;
+    }
+
     init() {
         this.setupEventListeners();
         this.audio.volume = 1.0;
     }
 
     setupEventListeners() {
-        this._boundUpdateProgress = () => this.updateProgress();
-        this._boundHandleSongEnd = () => this.handleSongEnd();
-        this._boundHandleLoadedMetadata = () => {
+        this.audio.addEventListener('timeupdate', () => this.updateProgress());
+        this.audio.addEventListener('ended', () => this.handleSongEnd());
+        this.audio.addEventListener('loadedmetadata', () => {
             if (this.elements.timeTotal) {
                 this.elements.timeTotal.textContent = this.formatTime(this.audio.duration);
             }
             if (this.elements.progressBar) {
                 this.elements.progressBar.max = 100;
             }
-        };
-
-        this.audio.addEventListener('timeupdate', this._boundUpdateProgress);
-        this.audio.addEventListener('ended', this._boundHandleSongEnd);
-        this.audio.addEventListener('loadedmetadata', this._boundHandleLoadedMetadata);
+        });
 
         this.elements.playBtn?.addEventListener('click', () => this.togglePlay());
         this.elements.nextBtn?.addEventListener('click', () => this.playNext());
@@ -71,7 +122,19 @@ class MusicApp {
         document.addEventListener('click', (e) => {
             if (window.app && window.app.currentClass !== 'music') return;
 
-            const downloadBtn = e.target.closest('.music-download-btn, .song-download-btn');
+            // Playlist header click
+            const playlistHeader = e.target.closest('.playlist-header');
+            if (playlistHeader) {
+                e.stopPropagation();
+                const folder = playlistHeader.dataset.folder;
+                if (folder) {
+                    this.togglePlaylist(folder);
+                }
+                return;
+            }
+
+            // Download button
+            const downloadBtn = e.target.closest('.music-download-btn');
             if (downloadBtn) {
                 e.stopPropagation();
                 const id = parseInt(downloadBtn.dataset.id, 10);
@@ -81,49 +144,24 @@ class MusicApp {
                 return;
             }
 
-            const playAllBtn = e.target.closest('.playlist-play-all');
-            if (playAllBtn) {
-                e.stopPropagation();
-                const folder = playAllBtn.dataset.folder;
-                if (folder) {
-                    this.playPlaylist(folder);
-                }
-                return;
-            }
-
-            const playlistHeader = e.target.closest('.playlist-header');
-            if (playlistHeader && !e.target.closest('.playlist-play-all')) {
-                const playlistId = playlistHeader.dataset.playlistId;
-                const playlist = playlistHeader.closest('.playlist');
-                
-                if (playlist) {
-                    document.querySelectorAll('.playlist.open').forEach(p => {
-                        if (p !== playlist) {
-                            p.classList.remove('open');
-                        }
-                    });
-                    
-                    playlist.classList.toggle('open');
-                }
-                return;
-            }
-
-            const song = e.target.closest('.music-card, .playlist-song');
-            if (song) {
-                const id = parseInt(song.dataset.id, 10);
+            // Music card/item click
+            const card = e.target.closest('.music-card, .music-list-item');
+            if (card) {
+                const id = parseInt(card.dataset.id, 10);
                 if (!isNaN(id)) {
                     this.playSongById(id);
                 }
             }
         });
 
+        // Keyboard navigation
         document.addEventListener('keydown', (e) => {
             if (window.app && window.app.currentClass !== 'music') return;
 
-            const target = e.target.closest('.music-card, .playlist-song');
-            if (target && (e.key === 'Enter' || e.key === ' ')) {
+            const card = e.target.closest('.music-card, .music-list-item');
+            if (card && (e.key === 'Enter' || e.key === ' ')) {
                 e.preventDefault();
-                const id = parseInt(target.dataset.id, 10);
+                const id = parseInt(card.dataset.id, 10);
                 if (!isNaN(id)) {
                     this.playSongById(id);
                 }
@@ -132,38 +170,38 @@ class MusicApp {
     }
 
     downloadSong(id) {
+        // Validate ID
         if (!Number.isInteger(id) || id < 1) {
             if (window.app) window.app.showNotification('Invalid song ID', 'error');
             return;
         }
 
+        // Find song
         const song = this.library.find(s => s.id === id);
         if (!song) {
             if (window.app) window.app.showNotification('Song not found', 'error');
             return;
         }
 
+        // Validate song data
         if (!song.src || typeof song.src !== 'string') {
             if (window.app) window.app.showNotification('Invalid song source', 'error');
             return;
         }
 
-        // Whitelist validation: only allow Songs/ directory
-        if (!song.src.startsWith('Songs/')) {
+        // Validate file path (prevent path traversal)
+        if (song.src.includes('..') || song.src.startsWith('/') || song.src.includes('\\')) {
             if (window.app) window.app.showNotification('Invalid file path', 'error');
             return;
         }
 
-        if (song.src.includes('..') || song.src.includes('\\') || song.src.includes('//')) {
-            if (window.app) window.app.showNotification('Invalid file path', 'error');
-            return;
-        }
-
+        // Validate file extension
         if (!song.src.toLowerCase().endsWith('.mp3')) {
             if (window.app) window.app.showNotification('Invalid file type', 'error');
             return;
         }
 
+        // Rate limiting check (max 1 download per second)
         const now = Date.now();
         if (this._lastDownloadTime && (now - this._lastDownloadTime) < 1000) {
             if (window.app) window.app.showNotification('Please wait before downloading again', 'warning');
@@ -171,13 +209,14 @@ class MusicApp {
         }
         this._lastDownloadTime = now;
 
+        // Sanitize filename (remove dangerous characters)
         const sanitizeFilename = (str) => {
             if (!str) return 'Unknown';
             return str
-                .replace(/[<>:"/\\|?*\x00-\x1F]/g, '')
-                .replace(/\s+/g, ' ')
+                .replace(/[<>:"/\\|?*\x00-\x1F]/g, '') // Remove illegal filename chars
+                .replace(/\s+/g, ' ') // Normalize whitespace
                 .trim()
-                .substring(0, 200);
+                .substring(0, 200); // Limit length
         };
 
         const safeTitle = sanitizeFilename(song.title);
@@ -187,12 +226,10 @@ class MusicApp {
         let link = null;
         try {
             link = document.createElement('a');
-            // Get the correct URL based on environment
-            const downloadUrl = window.CONFIG?.getFileUrl ? window.CONFIG.getFileUrl(song.src) : song.src;
-            link.href = downloadUrl;
+            link.href = song.src;
             link.download = filename;
             link.style.display = 'none';
-            link.rel = 'noopener noreferrer';
+            link.rel = 'noopener noreferrer'; // Security: prevent window.opener access
             
             document.body.appendChild(link);
             link.click();
@@ -201,10 +238,12 @@ class MusicApp {
                 window.app.showNotification(`Downloading: ${safeTitle}`, 'success');
             }
         } catch (error) {
+            console.error('Download failed:', error);
             if (window.app) {
                 window.app.showNotification('Download failed. Please try again.', 'error');
             }
         } finally {
+            // Always cleanup DOM element
             if (link && link.parentNode) {
                 document.body.removeChild(link);
             }
@@ -233,16 +272,12 @@ class MusicApp {
     seek(e) {
         if (this.audio.duration && isFinite(this.audio.duration)) {
             const percent = parseFloat(e.target.value);
-            if (!isNaN(percent)) {
-                this.audio.currentTime = (percent / 100) * this.audio.duration;
-            }
+            this.audio.currentTime = (percent / 100) * this.audio.duration;
         }
     }
 
     setVolume(e) {
         const vol = parseFloat(e.target.value) / 100;
-        if (isNaN(vol)) return;
-        
         this.audio.volume = Math.max(0, Math.min(1, vol));
         if (this.elements.volumeIcon) {
             if (vol === 0) {
@@ -255,24 +290,12 @@ class MusicApp {
         }
     }
 
-    cleanup() {
-        if (this.audio) {
-            this.audio.removeEventListener('timeupdate', this._boundUpdateProgress);
-            this.audio.removeEventListener('ended', this._boundHandleSongEnd);
-            this.audio.removeEventListener('loadedmetadata', this._boundHandleLoadedMetadata);
-            this.audio.pause();
-            this.audio.src = '';
-            this.audio.load();
-        }
-    }
-
     closePlayer() {
         this.audio.pause();
         this.audio.src = '';
         this.audio.load();
         this.isPlaying = false;
         this.currentIndex = -1;
-        this._isTogglingPlay = false;
         this.updatePlayIcon();
         this.updatePlayingStateInGrid();
         if (this.elements.player) {
@@ -280,35 +303,25 @@ class MusicApp {
         }
     }
 
-    async togglePlay() {
-        if (this._isTogglingPlay) return;
-        this._isTogglingPlay = true;
-
-        try {
-            if (this.currentIndex === -1) {
-                if (this.currentQueue.length > 0) {
-                    await this.playSong(0);
-                }
-                return;
+    togglePlay() {
+        if (this.currentIndex === -1) {
+            if (this.currentQueue.length > 0) {
+                this.playSong(0);
             }
-
-            if (this.isPlaying) {
-                this.audio.pause();
-                this.isPlaying = false;
-            } else {
-                try {
-                    await this.audio.play();
-                    this.isPlaying = true;
-                } catch (error) {
-                    if (window.app) window.app.showNotification('Playback requires interaction', 'warning');
-                    this.isPlaying = false;
-                }
-            }
-            this.updatePlayIcon();
-            this.updatePlayingStateInGrid();
-        } finally {
-            this._isTogglingPlay = false;
+            return;
         }
+
+        if (this.isPlaying) {
+            this.audio.pause();
+            this.isPlaying = false;
+        } else {
+            this.audio.play().catch(() => {
+                if (window.app) window.app.showNotification('Playback requires interaction', 'warning');
+            });
+            this.isPlaying = true;
+        }
+        this.updatePlayIcon();
+        this.updatePlayingStateInGrid();
     }
 
     updatePlayIcon() {
@@ -329,34 +342,28 @@ class MusicApp {
             if (libIndex !== -1) {
                 if (!this.isShuffle) this.currentQueue = [...this.library];
                 const newIndex = this.currentQueue.findIndex(s => s.id === id);
-                if (newIndex !== -1) {
-                    this.playSong(newIndex);
-                }
+                this.playSong(newIndex);
             }
         }
     }
 
-    async playSong(index) {
+    playSong(index) {
         if (index < 0 || index >= this.currentQueue.length) return;
 
         this.currentIndex = index;
         const song = this.currentQueue[this.currentIndex];
 
-        const songUrl = window.CONFIG?.getFileUrl ? window.CONFIG.getFileUrl(song.src) : song.src;
-        
-        this.audio.src = songUrl;
-        
-        try {
-            await this.audio.play();
-            this.isPlaying = true;
-            this.updatePlayIcon();
-            this.updatePlayerUI(song);
-            this.updatePlayingStateInGrid();
-        } catch (error) {
-            this.isPlaying = false;
-            this.updatePlayIcon();
-            if (window.app) window.app.showNotification('Could not play song', 'error');
-        }
+        this.audio.src = song.src;
+        this.audio.play()
+            .then(() => {
+                this.isPlaying = true;
+                this.updatePlayIcon();
+                this.updatePlayerUI(song);
+                this.updatePlayingStateInGrid();
+            })
+            .catch((error) => {
+                if (window.app) window.app.showNotification('Could not play song: ' + error.message, 'error');
+            });
 
         this.elements.player?.classList.remove('hidden');
     }
@@ -386,15 +393,14 @@ class MusicApp {
         this.playSong(prevIndex);
     }
 
-    async handleSongEnd() {
+    handleSongEnd() {
         if (this.isRepeat) {
             this.audio.currentTime = 0;
-            try {
-                await this.audio.play();
-            } catch (error) {
+            this.audio.play().catch(() => {
+                // Repeat playback blocked by browser; silently stop
                 this.isPlaying = false;
                 this.updatePlayIcon();
-            }
+            });
         } else {
             this.playNext();
         }
@@ -409,26 +415,13 @@ class MusicApp {
         const currentSong = this.currentIndex !== -1 ? this.currentQueue[this.currentIndex] : null;
 
         if (this.isShuffle) {
-            this.currentQueue = [...this.library];
-            for (let i = this.currentQueue.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [this.currentQueue[i], this.currentQueue[j]] = [this.currentQueue[j], this.currentQueue[i]];
-            }
+            this.currentQueue = [...this.library].sort(() => Math.random() - 0.5);
         } else {
             this.currentQueue = [...this.library];
         }
 
         if (currentSong) {
-            const newIndex = this.currentQueue.findIndex(s => s.id === currentSong.id);
-            if (newIndex !== -1) {
-                this.currentIndex = newIndex;
-            } else {
-                this.audio.pause();
-                this.isPlaying = false;
-                this.currentIndex = -1;
-                this.updatePlayIcon();
-                this.updatePlayingStateInGrid();
-            }
+            this.currentIndex = this.currentQueue.findIndex(s => s.id === currentSong.id);
         }
     }
 
@@ -445,15 +438,13 @@ class MusicApp {
     }
 
     updatePlayingStateInGrid() {
-        document.querySelectorAll('.music-card, .playlist-song').forEach(el => el.classList.remove('playing'));
-        
-        if (this.isPlaying && this.currentIndex !== -1 && this.currentIndex < this.currentQueue.length) {
+        document.querySelectorAll('.music-card, .music-list-item').forEach(card => card.classList.remove('playing'));
+        if (this.isPlaying && this.currentIndex !== -1) {
             const currentSong = this.currentQueue[this.currentIndex];
             if (currentSong) {
-                const selector = `.music-card[data-id="${currentSong.id}"], .playlist-song[data-id="${currentSong.id}"]`;
-                const playingElement = document.querySelector(selector);
-                if (playingElement) {
-                    playingElement.classList.add('playing');
+                const playingCard = document.querySelector('.music-card[data-id="' + String(currentSong.id) + '"], .music-list-item[data-id="' + String(currentSong.id) + '"]');
+                if (playingCard) {
+                    playingCard.classList.add('playing');
                 }
             }
         }
@@ -485,18 +476,13 @@ class MusicApp {
             return;
         }
 
-        const viewMode = this.getViewMode();
-
-        if (viewMode === 'list') {
-            this.renderListView(displayList);
-        } else {
+        if (this.viewMode === 'grid') {
             this.renderGridView(displayList);
+        } else {
+            this.renderListView(displayList);
         }
-    }
 
-    getViewMode() {
-        const toggle = document.getElementById('viewToggle');
-        return toggle?.dataset.mode || 'grid';
+        this.updatePlayingStateInGrid();
     }
 
     renderGridView(displayList) {
@@ -544,15 +530,13 @@ class MusicApp {
         });
 
         html += '</div>';
-
         this.elements.content.innerHTML = html;
-        this.updatePlayingStateInGrid();
     }
 
     renderListView(displayList) {
         const playlists = {};
         displayList.forEach(song => {
-            const folder = song.folder || 'Other';
+            const folder = song.folder || 'Unknown';
             if (!playlists[folder]) {
                 playlists[folder] = [];
             }
@@ -561,12 +545,14 @@ class MusicApp {
 
         let html = '<div class="music-playlists">';
 
-        Object.keys(playlists).forEach((folder) => {
+        Object.keys(playlists).sort().forEach(folder => {
             const songs = playlists[folder];
-            
+            const isExpanded = this.expandedPlaylists.has(folder);
+            const expandedClass = isExpanded ? 'expanded' : '';
+
             html += `
-                <div class="playlist" data-playlist="${this.sanitizeHTML(folder)}">
-                    <div class="playlist-header" data-playlist-id="${playlistId}">
+                <div class="playlist ${expandedClass}" data-folder="${this.sanitizeHTML(folder)}">
+                    <div class="playlist-header" data-folder="${this.sanitizeHTML(folder)}" role="button" tabindex="0" aria-expanded="${isExpanded}">
                         <div class="playlist-info">
                             <div class="playlist-icon">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -580,23 +566,16 @@ class MusicApp {
                                 <div class="playlist-count">${songs.length} song${songs.length !== 1 ? 's' : ''}</div>
                             </div>
                         </div>
-                        <div class="playlist-actions">
-                            <button class="playlist-play-all" data-folder="${this.sanitizeHTML(folder)}" type="button" title="Play all">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                                </svg>
-                            </button>
-                            <div class="playlist-toggle">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <polyline points="6 9 12 15 18 9"></polyline>
-                                </svg>
-                            </div>
+                        <div class="playlist-toggle">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
                         </div>
                     </div>
                     <div class="playlist-songs">
             `;
 
-            songs.forEach((song, songIndex) => {
+            songs.forEach((song, index) => {
                 const isCurrentlyPlaying = (
                     this.currentIndex !== -1 && 
                     this.currentIndex < this.currentQueue.length &&
@@ -607,17 +586,29 @@ class MusicApp {
                 const playingClass = isCurrentlyPlaying ? 'playing' : '';
 
                 html += `
-                    <div class="playlist-song ${playingClass}" 
+                    <div class="music-list-item ${playingClass}" 
                          data-id="${song.id}" 
+                         role="button" 
                          tabindex="0"
-                         role="button"
-                         aria-label="Play ${this.sanitizeHTML(song.title)} by ${this.sanitizeHTML(song.artist || folder)}">
-                        <div class="song-number">${songIndex + 1}</div>
-                        <div class="song-info">
-                            <div class="song-title">${this.sanitizeHTML(song.title)}</div>
-                            <div class="song-artist">${this.sanitizeHTML(song.artist || folder)}</div>
+                         aria-label="Song: ${this.sanitizeHTML(song.title)} by ${this.sanitizeHTML(song.artist || song.folder)}">
+                        <div class="list-item-number">${index + 1}</div>
+                        <div class="list-item-icon">
+                            ${isCurrentlyPlaying ? `
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <rect x="6" y="4" width="4" height="16"></rect>
+                                    <rect x="14" y="4" width="4" height="16"></rect>
+                                </svg>
+                            ` : `
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                </svg>
+                            `}
                         </div>
-                        <button class="song-download-btn" 
+                        <div class="list-item-info">
+                            <div class="list-item-title">${this.sanitizeHTML(song.title)}</div>
+                            <div class="list-item-artist">${this.sanitizeHTML(song.artist || song.folder)}</div>
+                        </div>
+                        <button class="music-download-btn" 
                                 data-id="${song.id}" 
                                 type="button"
                                 aria-label="Download ${this.sanitizeHTML(song.title)}"
@@ -639,17 +630,7 @@ class MusicApp {
         });
 
         html += '</div>';
-
         this.elements.content.innerHTML = html;
-        this.updatePlayingStateInGrid();
-    }
-
-    playPlaylist(folder) {
-        const playlistSongs = this.library.filter(s => s.folder === folder);
-        if (playlistSongs.length > 0) {
-            this.currentQueue = [...playlistSongs];
-            this.playSong(0);
-        }
     }
 }
 
